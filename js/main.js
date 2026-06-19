@@ -63,6 +63,33 @@ let player;
 let playerVel = new THREE.Vector3();
 let onGround = true;
 let animPhase = 0;
+let worldSeed = 1;
+let worldRng = null;
+
+function createRng(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function setWorldSeed(seed) {
+  worldSeed = (seed >>> 0) || 1;
+  worldRng = createRng(worldSeed);
+}
+
+function rng() {
+  return worldRng ? worldRng() : Math.random();
+}
+
+function waitForPaint() {
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(resolve));
+  });
+}
 
 const canvas = $('#game-canvas');
 
@@ -166,13 +193,13 @@ function buildWorld() {
     for (let z = -half + CFG.blockSize; z < half - CFG.blockSize / 2; z += CFG.blockSize) {
       const nearRoad = roads.some((r) => Math.abs(x - r) < CFG.roadWidth + 6 || Math.abs(z - r) < CFG.roadWidth + 6);
       if (!nearRoad) continue;
-      if (Math.random() < 0.2) continue;
+      if (rng() < 0.2) continue;
 
-      const bx = x + (Math.random() - 0.5) * 8;
-      const bz = z + (Math.random() - 0.5) * 8;
-      const bw = 10 + Math.random() * 8;
-      const bd = 10 + Math.random() * 8;
-      const floors = 2 + Math.floor(Math.random() * 4);
+      const bx = x + (rng() - 0.5) * 8;
+      const bz = z + (rng() - 0.5) * 8;
+      const bw = 10 + rng() * 8;
+      const bd = 10 + rng() * 8;
+      const floors = 2 + Math.floor(rng() * 4);
       const bh = floors * 4 + 2;
       const color = COLORS.houses[ci++ % COLORS.houses.length];
 
@@ -188,8 +215,8 @@ function buildWorld() {
       for (let f = 1; f <= floors; f++) {
         for (const wx of [-1, 1]) {
           for (const wz of [-1, 1]) {
-            if (Math.random() < 0.35) continue;
-            const win = box(1.8, 2, 0.2, Math.random() > 0.6 ? 0xfff9c4 : 0x37474f);
+            if (rng() < 0.35) continue;
+            const win = box(1.8, 2, 0.2, rng() > 0.6 ? 0xfff9c4 : 0x37474f);
             win.position.set(wx * (bw / 2 - 0.5), f * 4 - 1, wz * (bd / 2));
             building.add(win);
           }
@@ -218,8 +245,8 @@ function buildWorld() {
   }
 
   for (let i = 0; i < 40; i++) {
-    const tx = (Math.random() - 0.5) * CFG.worldSize * 1.6;
-    const tz = (Math.random() - 0.5) * CFG.worldSize * 1.6;
+    const tx = (rng() - 0.5) * CFG.worldSize * 1.6;
+    const tz = (rng() - 0.5) * CFG.worldSize * 1.6;
     const tree = new THREE.Group();
     const trunk = box(1.2, 3, 1.2, 0x5d4037);
     trunk.position.y = 1.5;
@@ -623,7 +650,8 @@ function updateEvents() {
 
 function initPlayer(pos) {
   player = createCharacter({ shirt: 0x00b06f, pants: 0x2d3436, skin: COLORS.skin, hat: 0x0984e3 });
-  if (pos) {
+  const valid = pos && Number.isFinite(pos.x) && Number.isFinite(pos.z);
+  if (valid) {
     player.position.set(pos.x, pos.y ?? 0, pos.z);
   } else {
     const spawn = getRandomSpawn();
@@ -634,6 +662,7 @@ function initPlayer(pos) {
 
 function collectGameState() {
   return {
+    worldSeed,
     influence: { ...state.influence },
     player: {
       x: player.position.x,
@@ -942,20 +971,24 @@ function setupInput() {
 }
 
 function showLoading() {
+  document.documentElement.classList.add('game-loading');
   $('#overlay-start').classList.add('hidden');
   $('#overlay-loading').classList.remove('hidden');
 }
 
 function hideLoading() {
+  document.documentElement.classList.remove('game-loading');
   $('#overlay-loading').classList.add('hidden');
 }
 
 function showStartScreen() {
+  document.documentElement.classList.remove('game-loading');
   $('#overlay-loading').classList.add('hidden');
   $('#overlay-start').classList.remove('hidden');
 }
 
 function hideAllOverlays() {
+  document.documentElement.classList.remove('game-loading');
   $('#overlay-start').classList.add('hidden');
   $('#overlay-loading').classList.add('hidden');
 }
@@ -1055,23 +1088,37 @@ function animate() {
   if (now - state.lastSave >= AUTOSAVE_INTERVAL_MS) persistGame();
 }
 
-function bootstrap() {
-  setupInput();
-
-  window.addEventListener('pagehide', () => persistGame(true));
+function registerSaveHandlers() {
+  const flush = () => persistGame(true);
+  window.addEventListener('pagehide', flush);
+  window.addEventListener('beforeunload', flush);
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') persistGame(true);
+    if (document.visibilityState === 'hidden') flush();
   });
+}
 
+async function bootstrap() {
+  setupInput();
+  registerSaveHandlers();
+
+  let saved = null;
   const savedSession = hasSave();
-  if (savedSession) showLoading();
-  else showStartScreen();
+
+  if (savedSession) {
+    showLoading();
+    await waitForPaint();
+    saved = load();
+    if (saved) setWorldSeed(saved.worldSeed);
+    else setWorldSeed((Math.random() * 0x7fffffff) | 0);
+  } else {
+    showStartScreen();
+    setWorldSeed((Math.random() * 0x7fffffff) | 0);
+  }
 
   initScene();
   onResize();
 
   if (savedSession) {
-    const saved = load();
     if (saved) {
       applySave(saved);
       hideLoading();

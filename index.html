@@ -5,6 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>БлокСити 3D</title>
   <link rel="stylesheet" href="css/style.css">
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem('chelblox_save_v1')) {
+          document.documentElement.classList.add('game-loading');
+        }
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
   <canvas id="game-canvas"></canvas>

@@ -13,6 +13,21 @@ html, body {
   color: #e6edf3;
 }
 
+html.game-loading,
+html.game-loading body {
+  background: #0d1117;
+}
+
+html.game-loading #ui,
+html.game-loading #game-canvas {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+html.game-loading #overlay-loading {
+  display: flex !important;
+}
+
 #game-canvas {
   display: block;
   width: 100%;
@@ -303,8 +318,9 @@ html, body {
 .overlay.hidden { display: none; }
 
 .overlay-loading {
-  backdrop-filter: blur(12px);
-  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(16px);
+  background: rgba(8, 10, 14, 0.88);
+  z-index: 200;
 }
 
 .loading-panel {

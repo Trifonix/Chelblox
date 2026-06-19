@@ -20,6 +20,10 @@ function migrate(data) {
     };
   }
 
+  if (!data.worldSeed) {
+    data.worldSeed = ((data.timestamp || Date.now()) >>> 0) || 1;
+  }
+
   data.version = SAVE_VERSION;
   return data;
 }
