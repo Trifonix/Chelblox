@@ -19,6 +19,7 @@ import {
 } from './influence.js';
 import { applyOutfit, getOutfitTier } from './player.js';
 import { loadSettings, saveSettings } from './settings.js';
+import { getWalkPhase, markWalking, tickWalkAnimations } from './walkAnim.js';
 import { clear, hasSave, load, save } from './storage.js';
 import { initInfluenceHUD, updateInfluenceHUD } from './ui.js';
 import { getRandomSpawn, initSpawnSystem } from './world.js';
@@ -76,7 +77,6 @@ let scene, camera, renderer, clock;
 let player;
 let playerVel = new THREE.Vector3();
 let onGround = true;
-let playerAnimPhase = 0;
 let worldSeed = 1;
 let worldRng = null;
 
@@ -384,7 +384,6 @@ function spawnNPC(type, x, z, saved = {}) {
     timer: saved.timer ?? Math.floor(Math.random() * 30) + 5,
     arrested: saved.arrested || false,
     fightTimer: 0,
-    animPhase: 0,
   };
   state.npcs.push(npc);
   return npc;
@@ -506,29 +505,11 @@ function arrestCriminal(npc, police) {
   persistGame();
 }
 
-function setWalkAnim(mesh, walking, phase = 0) {
-  const p = mesh.userData.parts;
-  if (!p) return;
-  if (walking) {
-    const s = Math.sin(phase * 10) * 0.5;
-    p.leftLeg.rotation.x = s;
-    p.rightLeg.rotation.x = -s;
-    p.leftArm.rotation.x = -s;
-    p.rightArm.rotation.x = s;
-  } else {
-    p.leftLeg.rotation.x = 0;
-    p.rightLeg.rotation.x = 0;
-    p.leftArm.rotation.x = 0;
-    p.rightArm.rotation.x = 0;
-  }
-}
-
 function moveNPC(npc, tx, tz, dt) {
   const dx = tx - npc.x;
   const dz = tz - npc.z;
   const d = Math.hypot(dx, dz);
   if (d < 0.5) {
-    setWalkAnim(npc.mesh, false);
     return true;
   }
 
@@ -552,10 +533,7 @@ function moveNPC(npc, tx, tz, dt) {
   npc.mesh.rotation.y = Math.atan2(dx, dz);
 
   if (moved) {
-    npc.animPhase = (npc.animPhase ?? 0) + dt * 10;
-    setWalkAnim(npc.mesh, true, npc.animPhase);
-  } else {
-    setWalkAnim(npc.mesh, false);
+    markWalking(npc.mesh, npc.speed);
   }
   return false;
 }
@@ -828,11 +806,8 @@ function updatePlayer(dt) {
     if (canMove(nx, player.position.z)) player.position.x = nx;
     if (canMove(player.position.x, nz)) player.position.z = nz;
     player.rotation.y = Math.atan2(mx, mz);
-    setWalkAnim(player, true, playerAnimPhase);
-    playerAnimPhase += dt * ((state.sprint || state.keys.ShiftLeft) ? 14 : 10);
+    markWalking(player, spd);
     if (Math.random() < 0.05) GameAudio.step();
-  } else {
-    setWalkAnim(player, false);
   }
 
   playerVel.y -= CFG.gravity * dt;
@@ -1155,6 +1130,10 @@ function animate() {
   const dt = Math.min(clock.getDelta(), 0.05);
   updatePlayer(dt);
   updateNPCs(dt);
+  tickWalkAnimations(
+    [player, ...state.npcs.filter((n) => !n.arrested).map((n) => n.mesh)],
+    dt,
+  );
   updateCars();
   updateEvents();
   animateFires(clock.elapsedTime);
@@ -1244,7 +1223,7 @@ function exposeTestApi() {
     getInfluence: () => getAllInfluence(),
     getCityStats: () => getCityStats(),
     getOutfitTier: () => (player ? getOutfitTier(player) : 0),
-    getNpcAnimPhases: () => state.npcs.map((n) => ({ id: n.id, phase: n.animPhase ?? 0 })),
+    getNpcAnimPhases: () => state.npcs.map((n) => ({ id: n.id, phase: getWalkPhase(n.mesh) })),
     getMultiplier: (type) => getMultiplier(type),
     addInfluence: (type, amount) => addInfluence(type, amount),
     getSettings: () => ({ ...gameSettings }),
