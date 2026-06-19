@@ -22,7 +22,10 @@
 
   <div id="ui">
     <header id="top-bar">
-      <div class="logo">Чел<span>Блокс</span></div>
+      <div class="logo-wrap">
+        <div class="logo">Чел<span>Блокс</span></div>
+        <span class="game-version" data-game-version data-testid="game-version"></span>
+      </div>
       <div class="stat-pill">
         <span class="stat-label">Очки</span>
         <span class="stat-value" id="score">0</span>
@@ -139,12 +142,13 @@
     <div class="loading-panel">
       <div class="loader-spinner" aria-hidden="true"></div>
       <p class="loading-text">Загрузка города…</p>
+      <p class="game-version loading-version" data-game-version></p>
     </div>
   </div>
 
   <div id="overlay-start" class="overlay hidden" data-testid="overlay-start">
     <div class="panel start-panel">
-      <h1>Чел<span>Блокс</span></h1>
+      <h1>Чел<span>Блокс</span> <span class="game-version start-version" data-game-version></span></h1>
       <p class="subtitle">Городской симулятор в стиле Roblox</p>
       <ul class="feature-list">
         <li>Ходи по 3D-городу от третьего лица</li>
@@ -181,6 +185,7 @@
   <div id="overlay-pause" class="overlay hidden" data-testid="overlay-pause">
     <div class="panel">
       <h2>Пауза</h2>
+      <p class="game-version pause-version" data-game-version></p>
       <label class="settings-row pause-settings" for="setting-low-quality">
         <input type="checkbox" id="setting-low-quality" class="setting-low-quality" data-testid="setting-low-quality">
         <span>Низкие настройки (меньше лагов)</span>

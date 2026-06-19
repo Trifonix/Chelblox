@@ -24,6 +24,7 @@ import { loadSettings, saveSettings } from './settings.js';
 import { getWalkPhase, markWalking, tickWalkAnimations } from './walkAnim.js';
 import { clear, hasSave, load, save } from './storage.js';
 import { initInfluenceHUD, updateInfluenceHUD } from './ui.js';
+import { applyVersionToUI, GAME_VERSION, getVersionInfo } from './version.js';
 import { getRandomSpawn, initSpawnSystem } from './world.js';
 
 /* ═══════════════════════════════════════════
@@ -1156,6 +1157,7 @@ function registerSaveHandlers() {
 }
 
 async function bootstrap() {
+  applyVersionToUI();
   setupInput();
   registerSaveHandlers();
   exposeTestApi();
@@ -1230,6 +1232,8 @@ function exposeTestApi() {
     getMultiplier: (type) => getMultiplier(type),
     addInfluence: (type, amount) => addInfluence(type, amount),
     getSettings: () => ({ ...gameSettings }),
+    getVersion: () => GAME_VERSION,
+    getVersionInfo: () => getVersionInfo(),
   };
 }
 

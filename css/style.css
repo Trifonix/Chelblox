@@ -67,7 +67,39 @@ html.game-loading #overlay-loading {
   font-size: 1.35rem;
   font-weight: 800;
   letter-spacing: 0.5px;
+}
+
+.logo-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
   margin-right: 8px;
+}
+
+.game-version {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #8b949e;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.start-panel .start-version {
+  font-size: 0.55em;
+  font-weight: 700;
+  color: #8b949e;
+  vertical-align: middle;
+}
+
+.loading-version,
+.pause-version {
+  margin-top: 8px;
+  text-align: center;
+}
+
+.pause-version {
+  margin-top: 0;
+  margin-bottom: 12px;
 }
 
 .logo span {
