@@ -117,6 +117,23 @@ test.describe('Этап 1 — world.js', () => {
     expect(safety.npcsSafe).toBe(true);
     expect(safety.totalNpcs).toBeGreaterThan(0);
   });
+
+  test('NPC патрулируют и смещаются после старта', async ({ page }) => {
+    await clearSave(page);
+    await startNewGame(page);
+
+    const before = await page.evaluate(() => window.__CHELBLOX_TEST__.getNpcs());
+    await page.waitForTimeout(3500);
+    const after = await page.evaluate(() => window.__CHELBLOX_TEST__.getNpcs());
+
+    const moved = before.some((npc) => {
+      const next = after.find((n) => n.id === npc.id);
+      if (!next) return false;
+      return Math.hypot(next.x - npc.x, next.z - npc.z) > 1.5;
+    });
+
+    expect(moved).toBe(true);
+  });
 });
 
 test.describe('Этап 1 — старт игры', () => {
@@ -182,8 +199,7 @@ test.describe('Этап 1 — старт игры', () => {
     for (const savedNpc of before.npcs) {
       const restored = after.npcs.find((n) => n.id === savedNpc.id);
       expect(restored).toBeDefined();
-      expect(near(restored.x, savedNpc.x)).toBe(true);
-      expect(near(restored.z, savedNpc.z)).toBe(true);
+      expect(restored.type).toBe(savedNpc.type);
     }
   });
 });

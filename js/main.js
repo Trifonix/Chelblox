@@ -381,7 +381,7 @@ function spawnNPC(type, x, z, saved = {}) {
     speed: type === 'criminal' ? 7 : 6,
     target: null,
     state: saved.state || 'idle',
-    timer: saved.timer ?? Math.random() * 100,
+    timer: saved.timer ?? Math.floor(Math.random() * 30) + 5,
     arrested: saved.arrested || false,
     fightTimer: 0,
     animPhase: 0,
@@ -523,7 +523,7 @@ function setWalkAnim(mesh, walking, phase = 0) {
   }
 }
 
-function moveNPC(npc, tx, tz) {
+function moveNPC(npc, tx, tz, dt) {
   const dx = tx - npc.x;
   const dz = tz - npc.z;
   const d = Math.hypot(dx, dz);
@@ -536,7 +536,7 @@ function moveNPC(npc, tx, tz) {
     && state.npcs.some((p) => p.type === 'police' && p.state === 'chase' && p.target === npc);
   npc.speed = getNpcSpeed(npc, chased);
 
-  const step = Math.min(npc.speed * clock.getDelta(), d);
+  const step = Math.min(npc.speed * dt, d);
   const nx = npc.x + (dx / d) * step;
   const nz = npc.z + (dz / d) * step;
   const oldX = npc.x;
@@ -552,7 +552,7 @@ function moveNPC(npc, tx, tz) {
   npc.mesh.rotation.y = Math.atan2(dx, dz);
 
   if (moved) {
-    npc.animPhase = (npc.animPhase ?? 0) + clock.getDelta() * 10;
+    npc.animPhase = (npc.animPhase ?? 0) + dt * 10;
     setWalkAnim(npc.mesh, true, npc.animPhase);
   } else {
     setWalkAnim(npc.mesh, false);
@@ -560,17 +560,17 @@ function moveNPC(npc, tx, tz) {
   return false;
 }
 
-function updateNPCs() {
+function updateNPCs(dt) {
   state.npcs.forEach((npc) => {
     if (npc.arrested) return;
-    if (npc.type === 'police') updatePolice(npc);
-    else if (npc.type === 'criminal') updateCriminal(npc);
-    else if (npc.type === 'firefighter') updateFirefighter(npc);
-    else updateCivilian(npc);
+    if (npc.type === 'police') updatePolice(npc, dt);
+    else if (npc.type === 'criminal') updateCriminal(npc, dt);
+    else if (npc.type === 'firefighter') updateFirefighter(npc, dt);
+    else updateCivilian(npc, dt);
   });
 }
 
-function updatePolice(npc) {
+function updatePolice(npc, dt) {
   if (npc.timer > 0) {
     npc.timer--;
     return;
@@ -593,26 +593,26 @@ function updatePolice(npc) {
       return;
     }
     if (Math.random() < 0.01) GameAudio.siren();
-    moveNPC(npc, npc.target.x, npc.target.z);
+    moveNPC(npc, npc.target.x, npc.target.z, dt);
     return;
   }
 
   const t = npc.target;
-  if (t && moveNPC(npc, t.x, t.z)) npc.state = 'idle';
+  if (t && moveNPC(npc, t.x, t.z, dt)) npc.state = 'idle';
 }
 
-function updateCriminal(npc) {
+function updateCriminal(npc, dt) {
   npc.timer--;
   if (npc.timer <= 0) {
     npc.target = randomPatrolTarget();
     npc.timer = 60 + Math.random() * 80;
   }
   if (npc.target) {
-    if (moveNPC(npc, npc.target.x, npc.target.z)) npc.target = null;
+    if (moveNPC(npc, npc.target.x, npc.target.z, dt)) npc.target = null;
   }
 }
 
-function updateFirefighter(npc) {
+function updateFirefighter(npc, dt) {
   if (npc.state === 'idle') {
     npc.timer--;
     if (npc.timer <= 0) {
@@ -629,7 +629,7 @@ function updateFirefighter(npc) {
       npc.fightTimer = Math.max(30, Math.floor(100 / getMultiplier('firefighter')));
       return;
     }
-    moveNPC(npc, npc.target.x, npc.target.z);
+    moveNPC(npc, npc.target.x, npc.target.z, dt);
     return;
   }
 
@@ -646,17 +646,17 @@ function updateFirefighter(npc) {
   }
 
   if (npc.state === 'patrol' && npc.target) {
-    if (moveNPC(npc, npc.target.x, npc.target.z)) npc.state = 'idle';
+    if (moveNPC(npc, npc.target.x, npc.target.z, dt)) npc.state = 'idle';
   }
 }
 
-function updateCivilian(npc) {
+function updateCivilian(npc, dt) {
   npc.timer--;
   if (npc.timer <= 0) {
     npc.target = randomPatrolTarget();
     npc.timer = 80 + Math.random() * 100;
   }
-  if (npc.target && moveNPC(npc, npc.target.x, npc.target.z)) npc.target = null;
+  if (npc.target && moveNPC(npc, npc.target.x, npc.target.z, dt)) npc.target = null;
 }
 
 function updateCars() {
@@ -1154,7 +1154,7 @@ function animate() {
 
   const dt = Math.min(clock.getDelta(), 0.05);
   updatePlayer(dt);
-  updateNPCs();
+  updateNPCs(dt);
   updateCars();
   updateEvents();
   animateFires(clock.elapsedTime);
