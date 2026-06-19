@@ -1,3 +1,5 @@
+import { isMobileDevice } from './mobile.js';
+
 export const SETTINGS_KEY = 'chelblox_settings_v1';
 
 const DEFAULTS = {
@@ -7,11 +9,13 @@ const DEFAULTS = {
 export function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return { ...DEFAULTS };
+    if (!raw) {
+      return { ...DEFAULTS, lowQuality: isMobileDevice() };
+    }
     const data = JSON.parse(raw);
     return { ...DEFAULTS, ...data, lowQuality: Boolean(data.lowQuality) };
   } catch {
-    return { ...DEFAULTS };
+    return { ...DEFAULTS, lowQuality: isMobileDevice() };
   }
 }
 

@@ -21,6 +21,12 @@ import {
 } from './influence.js';
 import { applyOutfit, getOutfitTier } from './player.js';
 import { loadSettings, saveSettings } from './settings.js';
+import {
+  applyMobileUIMode,
+  getRendererPixelRatio,
+  initMobileControls,
+  isMobileUI,
+} from './mobile.js';
 import { getWalkPhase, markWalking, tickWalkAnimations } from './walkAnim.js';
 import { clear, hasSave, load, save } from './storage.js';
 import { initInfluenceHUD, updateInfluenceHUD } from './ui.js';
@@ -124,7 +130,20 @@ function box(w, h, d, color) {
   return m;
 }
 
-function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+function resetCamera() {
+  state.camYaw = player ? player.rotation.y : 0;
+  state.camPitch = 0.25;
+}
+
+function callTaxi() {
+  GameAudio.button();
+  notify('Вызов такси — в разработке (этап 3)', 'info');
+}
+
+function callMilitary() {
+  GameAudio.button();
+  notify('Военные — в разработке (этап 3)', 'info');
+}
 
 function randomPatrolTarget() {
   const pos = getRandomSpawn(0.9);
@@ -941,14 +960,28 @@ function setupSettingsUI() {
 
 function setupInput() {
   setupSettingsUI();
+  initMobileControls({
+    state,
+    canvas,
+    onJump: () => { doJump(); flashBtn('#btn-jump'); },
+    onPolice: callPolice,
+    onFire: callFirefighters,
+    onTaxi: callTaxi,
+    onMilitary: callMilitary,
+    onCamera: () => {
+      resetCamera();
+      flashBtn('#btn-camera');
+      notify('Камера сброшена', 'info');
+    },
+  });
+
   window.addEventListener('keydown', (e) => {
     state.keys[e.code] = true;
     if (e.code === 'Space') { e.preventDefault(); doJump(); }
     if (e.code === 'Digit1') callPolice();
     if (e.code === 'Digit2') callFirefighters();
     if (e.code === 'KeyC') {
-      state.camYaw = player ? player.rotation.y : 0;
-      state.camPitch = 0.25;
+      resetCamera();
       GameAudio.button();
     }
     if (e.code === 'Escape') {
@@ -961,7 +994,7 @@ function setupInput() {
   let lastMX = 0;
   let lastMY = 0;
   canvas.addEventListener('mousedown', (e) => {
-    if (!state.running || state.paused) return;
+    if (!state.running || state.paused || isMobileUI()) return;
     state.mouseDown = true;
     lastMX = e.clientX;
     lastMY = e.clientY;
@@ -995,8 +1028,7 @@ function setupInput() {
   $('#btn-sprint').addEventListener('mouseup', () => { state.sprint = false; });
   $('#btn-sprint').addEventListener('mouseleave', () => { state.sprint = false; });
   $('#btn-camera').addEventListener('click', () => {
-    state.camYaw = player ? player.rotation.y : 0;
-    state.camPitch = 0.25;
+    resetCamera();
     GameAudio.button();
     flashBtn('#btn-camera');
     notify('Камера сброшена', 'info');
@@ -1057,9 +1089,7 @@ function initScene() {
 
   renderer = new THREE.WebGLRenderer({ canvas, antialias: !gameSettings.lowQuality });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(
-    gameSettings.lowQuality ? 1 : Math.min(window.devicePixelRatio, 2),
-  );
+  renderer.setPixelRatio(getRendererPixelRatio(gameSettings.lowQuality));
   renderer.shadowMap.enabled = !gameSettings.lowQuality;
   if (!gameSettings.lowQuality) {
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -1096,6 +1126,7 @@ function onResize() {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(getRendererPixelRatio(gameSettings.lowQuality));
 }
 
 function startGame(opts = {}) {
@@ -1158,6 +1189,7 @@ function registerSaveHandlers() {
 
 async function bootstrap() {
   applyVersionToUI();
+  applyMobileUIMode();
   setupInput();
   registerSaveHandlers();
   exposeTestApi();

@@ -1,0 +1,308 @@
+/* Мобильный UI — активируется классом .mobile-ui на body */
+
+.mobile-ui {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.mobile-ui #game-canvas {
+  touch-action: none;
+}
+
+/* Компактная верхняя панель */
+.mobile-ui #top-bar {
+  padding: 8px 10px;
+  gap: 8px;
+}
+
+.mobile-ui .logo {
+  font-size: 1.05rem;
+}
+
+.mobile-ui .top-bar .game-version {
+  display: none;
+}
+
+.mobile-ui .stat-pill {
+  padding: 4px 8px;
+  gap: 4px;
+}
+
+.mobile-ui .stat-label {
+  font-size: 0.65rem;
+}
+
+.mobile-ui .stat-value {
+  font-size: 0.95rem;
+}
+
+.mobile-ui .bar-wrap {
+  width: 48px;
+  height: 6px;
+}
+
+.mobile-ui .icon-btn {
+  min-width: 40px;
+  min-height: 40px;
+  font-size: 1rem;
+}
+
+/* Панели — скрыты, открываются как drawer */
+.mobile-ui #mission-panel,
+.mobile-ui #influence-panel {
+  display: block;
+  position: fixed;
+  top: auto;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  max-height: 55vh;
+  margin: 0;
+  border-radius: 14px 14px 0 0;
+  z-index: 200;
+  transform: translateY(110%);
+  transition: transform 0.28s ease;
+  pointer-events: auto;
+}
+
+.mobile-ui #influence-panel {
+  left: 0;
+  right: 0;
+}
+
+.mobile-ui #mission-panel.drawer-open,
+.mobile-ui #influence-panel.drawer-open {
+  transform: translateY(0);
+}
+
+.mobile-ui #mobile-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 190;
+  pointer-events: auto;
+}
+
+.mobile-ui #mobile-drawer-backdrop.hidden {
+  display: none;
+}
+
+/* FAB-кнопки панелей */
+.mobile-fab {
+  display: none;
+}
+
+.mobile-ui .mobile-fab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  z-index: 120;
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50%;
+  background: rgba(13, 17, 23, 0.88);
+  color: #e6edf3;
+  font-size: 1.25rem;
+  pointer-events: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.mobile-ui #btn-mobile-missions {
+  top: 56px;
+  left: 10px;
+}
+
+.mobile-ui #btn-mobile-status {
+  top: 56px;
+  right: 10px;
+}
+
+/* Нижняя панель десктопа — скрыть дубли */
+.mobile-ui #bottom-bar {
+  display: none;
+}
+
+.mobile-ui #hint-bar {
+  display: none;
+}
+
+/* Touch-управление */
+#touch-controls {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 110;
+  pointer-events: none;
+  padding: 8px 10px max(12px, env(safe-area-inset-bottom));
+  gap: 8px;
+}
+
+.mobile-ui #touch-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto;
+  align-items: end;
+}
+
+.touch-zone {
+  pointer-events: auto;
+}
+
+.touch-move {
+  display: grid;
+  grid-template-columns: repeat(3, 52px);
+  grid-template-rows: repeat(2, 52px);
+  gap: 6px;
+  justify-content: start;
+}
+
+.touch-key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 52px;
+  min-height: 52px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  background: rgba(13, 17, 23, 0.82);
+  color: #e6edf3;
+  font-size: 1.2rem;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.touch-key:active {
+  background: rgba(0, 176, 111, 0.35);
+  transform: scale(0.96);
+}
+
+.touch-key-up { grid-column: 2; grid-row: 1; }
+.touch-key-left { grid-column: 1; grid-row: 2; }
+.touch-key-down { grid-column: 2; grid-row: 2; }
+.touch-key-right { grid-column: 3; grid-row: 2; }
+
+.touch-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+  justify-content: flex-end;
+}
+
+.touch-action {
+  min-height: 48px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  background: rgba(13, 17, 23, 0.82);
+  color: #e6edf3;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.touch-action:active {
+  background: rgba(88, 166, 255, 0.25);
+}
+
+.touch-dispatch {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.touch-dispatch-btn {
+  min-height: 48px;
+  padding: 6px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  background: rgba(22, 27, 34, 0.92);
+  color: #e6edf3;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.touch-dispatch-btn:active {
+  background: rgba(0, 176, 111, 0.3);
+}
+
+.touch-dispatch-icon {
+  display: block;
+  font-size: 1.15rem;
+  margin-bottom: 2px;
+}
+
+/* Стартовый экран и оверлеи */
+.mobile-ui .start-panel {
+  max-width: 100%;
+  margin: 12px;
+  padding: 20px 16px;
+}
+
+.mobile-ui .start-panel h1 {
+  font-size: 1.6rem;
+}
+
+.mobile-ui .panel {
+  max-width: calc(100vw - 24px);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.mobile-ui .note-desktop {
+  display: none;
+}
+
+.mobile-ui .note-mobile {
+  display: block;
+}
+
+.note-mobile {
+  display: none;
+}
+
+.mobile-ui .controls-table .controls-desktop {
+  display: none;
+}
+
+.mobile-ui .controls-table .controls-mobile {
+  display: table-row;
+}
+
+.controls-table .controls-mobile {
+  display: none;
+}
+
+/* Уведомления не перекрывают touch-зону */
+.mobile-ui #notifications {
+  bottom: 200px;
+  max-width: calc(100vw - 20px);
+}
+
+@media (max-width: 380px) {
+  .touch-move {
+    grid-template-columns: repeat(3, 46px);
+    grid-template-rows: repeat(2, 46px);
+  }
+
+  .touch-key {
+    min-width: 46px;
+    min-height: 46px;
+    font-size: 1rem;
+  }
+
+  .touch-dispatch-btn {
+    font-size: 0.65rem;
+  }
+}

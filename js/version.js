@@ -1,7 +1,7 @@
 import { GAME_NAME_RU } from './config.js';
 
 /** Версия игры (семантическая: major.minor.patch). */
-export const GAME_VERSION = '0.2.1';
+export const GAME_VERSION = '0.3.1';
 
 export function getVersionLabel() {
   return `v${GAME_VERSION}`;

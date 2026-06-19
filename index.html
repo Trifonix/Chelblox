@@ -2,11 +2,14 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="description" content="ЧелБлокс — браузерная 3D-игра: город, NPC, события и прогресс игрока.">
   <meta name="theme-color" content="#0d1117">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <title>ЧелБлокс</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/mobile.css">
   <script>
     (function () {
       try {
@@ -138,6 +141,30 @@
     </footer>
   </div>
 
+  <div id="mobile-drawer-backdrop" class="hidden" aria-hidden="true"></div>
+  <button type="button" class="mobile-fab" id="btn-mobile-missions" title="Задания" aria-label="Задания">📋</button>
+  <button type="button" class="mobile-fab" id="btn-mobile-status" title="Статус" aria-label="Статус">📊</button>
+
+  <div id="touch-controls" class="hidden" aria-label="Сенсорное управление">
+    <div class="touch-zone touch-move">
+      <button type="button" class="touch-key touch-key-up" data-touch-key="KeyW" aria-label="Вперёд">▲</button>
+      <button type="button" class="touch-key touch-key-left" data-touch-key="KeyA" aria-label="Влево">◀</button>
+      <button type="button" class="touch-key touch-key-down" data-touch-key="KeyS" aria-label="Назад">▼</button>
+      <button type="button" class="touch-key touch-key-right" data-touch-key="KeyD" aria-label="Вправо">▶</button>
+    </div>
+    <div class="touch-zone touch-actions">
+      <button type="button" class="touch-action" id="touch-jump">Прыжок</button>
+      <button type="button" class="touch-action" id="touch-sprint">Бег</button>
+      <button type="button" class="touch-action" id="touch-camera">Камера</button>
+    </div>
+    <div class="touch-dispatch">
+      <button type="button" class="touch-dispatch-btn" id="touch-police"><span class="touch-dispatch-icon">🚔</span>Полиция</button>
+      <button type="button" class="touch-dispatch-btn" id="touch-fire"><span class="touch-dispatch-icon">🚒</span>Пожарные</button>
+      <button type="button" class="touch-dispatch-btn" id="touch-taxi"><span class="touch-dispatch-icon">🚕</span>Такси</button>
+      <button type="button" class="touch-dispatch-btn" id="touch-military"><span class="touch-dispatch-icon">🪖</span>Военные</button>
+    </div>
+  </div>
+
   <div id="overlay-loading" class="overlay overlay-loading hidden" data-testid="overlay-loading">
     <div class="loading-panel">
       <div class="loader-spinner" aria-hidden="true"></div>
@@ -161,7 +188,8 @@
         <span>Низкие настройки (меньше лагов)</span>
       </label>
       <button class="primary-btn" id="btn-play" data-testid="btn-play">Играть</button>
-      <p class="note">После нажатия кликни по экрану, чтобы управлять мышью</p>
+      <p class="note note-desktop">После нажатия кликни по экрану, чтобы управлять мышью</p>
+      <p class="note note-mobile">Нажми «Играть» — управление кнопками на экране, обзор — перетаскиванием справа</p>
     </div>
   </div>
 
@@ -169,14 +197,20 @@
     <div class="panel">
       <h2>Управление</h2>
       <table class="controls-table">
-        <tr><td>W A S D</td><td>Движение персонажа</td></tr>
-        <tr><td>Мышь</td><td>Осмотреться (зажми ЛКМ или захвати курсор)</td></tr>
-        <tr><td>Пробел</td><td>Прыжок</td></tr>
-        <tr><td>Shift</td><td>Бег</td></tr>
-        <tr><td>1</td><td>Вызвать полицию к преступникам</td></tr>
-        <tr><td>2</td><td>Отправить пожарных к пожарам</td></tr>
-        <tr><td>C</td><td>Сбросить камеру</td></tr>
-        <tr><td>Esc</td><td>Пауза / отпустить мышь</td></tr>
+        <tr class="controls-desktop"><td>W A S D</td><td>Движение персонажа</td></tr>
+        <tr class="controls-desktop"><td>Мышь</td><td>Осмотреться (зажми ЛКМ или захвати курсор)</td></tr>
+        <tr class="controls-desktop"><td>Пробел</td><td>Прыжок</td></tr>
+        <tr class="controls-desktop"><td>Shift</td><td>Бег</td></tr>
+        <tr class="controls-desktop"><td>1</td><td>Вызвать полицию к преступникам</td></tr>
+        <tr class="controls-desktop"><td>2</td><td>Отправить пожарных к пожарам</td></tr>
+        <tr class="controls-desktop"><td>C</td><td>Сбросить камеру</td></tr>
+        <tr class="controls-desktop"><td>Esc</td><td>Пауза / отпустить мышь</td></tr>
+        <tr class="controls-mobile"><td>Кнопки ◀▲▼▶</td><td>Движение</td></tr>
+        <tr class="controls-mobile"><td>Правая половина экрана</td><td>Осмотреться (перетаскивание)</td></tr>
+        <tr class="controls-mobile"><td>Прыжок / Бег</td><td>Кнопки справа внизу</td></tr>
+        <tr class="controls-mobile"><td>🚔 🚒 🚕 🪖</td><td>Диспетчер служб</td></tr>
+        <tr class="controls-mobile"><td>📋 / 📊</td><td>Задания и статус</td></tr>
+        <tr class="controls-mobile"><td>⏸</td><td>Пауза</td></tr>
       </table>
       <button class="primary-btn" id="btn-help-close">Понятно</button>
     </div>
