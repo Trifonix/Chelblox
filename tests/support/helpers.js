@@ -1,12 +1,18 @@
 // @ts-check
 
 export const SAVE_KEY = 'chelblox_save_v1';
+export const SETTINGS_KEY = 'chelblox_settings_v1';
 export const E2E_URL = '/?e2e=1';
 
 /** @param {import('@playwright/test').Page} page */
 export async function clearSave(page) {
   await page.goto(E2E_URL);
   await page.evaluate((key) => localStorage.removeItem(key), SAVE_KEY);
+}
+
+/** @param {import('@playwright/test').Page} page */
+export async function clearSettings(page) {
+  await page.evaluate((key) => localStorage.removeItem(key), SETTINGS_KEY);
 }
 
 /** @param {import('@playwright/test').Page} page */

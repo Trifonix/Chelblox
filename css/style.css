@@ -118,6 +118,75 @@ html.game-loading #overlay-loading {
   transition: width 0.4s, background 0.4s;
 }
 
+.bar-wrap.wide {
+  width: 100%;
+}
+
+/* Influence panel */
+#influence-panel {
+  position: fixed;
+  top: 80px;
+  right: 18px;
+  width: 220px;
+  max-height: calc(100vh - 100px);
+  overflow-y: auto;
+  background: rgba(13,17,23,0.9);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 14px;
+  pointer-events: auto;
+}
+
+#influence-panel h3 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #8b949e;
+  margin: 12px 0 8px;
+  letter-spacing: 0.5px;
+}
+
+#influence-panel h3:first-child {
+  margin-top: 0;
+}
+
+.inf-block {
+  margin-bottom: 10px;
+}
+
+.inf-block.compact {
+  margin-bottom: 6px;
+}
+
+.inf-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+}
+
+.inf-icon {
+  font-size: 1rem;
+}
+
+.inf-title {
+  flex: 1;
+  color: #c9d1d9;
+}
+
+.inf-pct {
+  font-size: 0.75rem;
+  color: #8b949e;
+  min-width: 32px;
+  text-align: right;
+}
+
+.inf-hint {
+  font-size: 0.7rem;
+  color: #8b949e;
+  margin-top: 4px;
+}
+
 .top-actions {
   margin-left: auto;
   display: flex;
@@ -400,6 +469,43 @@ html.game-loading #overlay-loading {
   color: #8b949e;
 }
 
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 0;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 0.9rem;
+  color: #c9d1d9;
+}
+
+.settings-row input {
+  width: 18px;
+  height: 18px;
+  accent-color: #00b06f;
+  cursor: pointer;
+}
+
+.settings-row.pause-settings {
+  margin-top: 0;
+}
+
+.settings-note {
+  font-size: 0.78rem;
+  color: #8b949e;
+  margin: -6px 0 14px;
+  text-align: left;
+}
+
+.start-panel .settings-row {
+  margin-bottom: 20px;
+}
+
 .primary-btn {
   display: inline-block;
   padding: 14px 40px;
@@ -451,6 +557,10 @@ html.game-loading #overlay-loading {
 
 .panel h2 {
   margin-bottom: 8px;
+}
+
+@media (max-width: 900px) {
+  #influence-panel { display: none; }
 }
 
 @media (max-width: 600px) {

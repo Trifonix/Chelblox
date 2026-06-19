@@ -1,6 +1,26 @@
 import * as THREE from 'three';
-import { AUTOSAVE_INTERVAL_MS, GAME_NAME_RU, SAVE_KEY, SPAWN_CONFIG } from './config.js';
+import {
+  AUTOSAVE_INTERVAL_MS,
+  GAME_NAME_RU,
+  INFLUENCE_CONFIG,
+  SAVE_KEY,
+  SPAWN_CONFIG,
+} from './config.js';
+import {
+  addInfluence,
+  applyCityEvent,
+  getAllInfluence,
+  getCityStats,
+  getMultiplier,
+  getSnapshot,
+  getTier,
+  initInfluence,
+  resetInfluence,
+} from './influence.js';
+import { applyOutfit, getOutfitTier } from './player.js';
+import { loadSettings, saveSettings } from './settings.js';
 import { clear, hasSave, load, save } from './storage.js';
+import { initInfluenceHUD, updateInfluenceHUD } from './ui.js';
 import { getRandomSpawn, initSpawnSystem } from './world.js';
 
 /* ═══════════════════════════════════════════
@@ -33,14 +53,6 @@ const state = {
   running: false,
   paused: false,
   score: 0,
-  cityHealth: 100,
-  influence: {
-    player: 0,
-    firefighter: 0,
-    police: 0,
-    taxi: 0,
-    military: 0,
-  },
   keys: {},
   mouseDown: false,
   pointerLocked: false,
@@ -56,13 +68,15 @@ const state = {
   lastSave: 0,
 };
 
+const SERVICE_NPC_TYPES = new Set(['police', 'firefighter', 'taxi', 'military']);
+
 let npcIdCounter = 0;
 
 let scene, camera, renderer, clock;
 let player;
 let playerVel = new THREE.Vector3();
 let onGround = true;
-let animPhase = 0;
+let playerAnimPhase = 0;
 let worldSeed = 1;
 let worldRng = null;
 
@@ -92,6 +106,7 @@ function waitForPaint() {
 }
 
 const canvas = $('#game-canvas');
+const gameSettings = loadSettings();
 
 function mat(color) {
   return new THREE.MeshLambertMaterial({ color });
@@ -99,12 +114,38 @@ function mat(color) {
 
 function box(w, h, d, color) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color));
-  m.castShadow = true;
-  m.receiveShadow = true;
+  if (!gameSettings.lowQuality) {
+    m.castShadow = true;
+    m.receiveShadow = true;
+  }
   return m;
 }
 
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+
+function randomPatrolTarget() {
+  const pos = getRandomSpawn(0.9);
+  return { x: pos.x, z: pos.z };
+}
+
+function awardSuccess(serviceType) {
+  addInfluence(serviceType, INFLUENCE_CONFIG.servicePerSuccess);
+  addInfluence('player', INFLUENCE_CONFIG.playerPerEvent);
+}
+
+function onInfluenceChange(snapshot) {
+  updateInfluenceHUD(snapshot);
+  if (player) applyOutfit(player, snapshot.playerTier);
+}
+
+function getNpcSpeed(npc, chased = false) {
+  if (npc.type === 'criminal') return chased ? 10 : 7;
+  const base = 6;
+  if (SERVICE_NPC_TYPES.has(npc.type)) {
+    return base * getMultiplier(npc.type);
+  }
+  return base;
+}
 
 function dist2d(a, b) {
   return Math.hypot(a.x - b.x, a.z - b.z);
@@ -165,12 +206,18 @@ function buildWorld() {
     mat(COLORS.grass)
   );
   ground.rotation.x = -Math.PI / 2;
-  ground.receiveShadow = true;
+  if (!gameSettings.lowQuality) ground.receiveShadow = true;
   scene.add(ground);
 
-  const grid = new THREE.GridHelper(CFG.worldSize * 2, 40, 0x2d6a35, 0x358a40);
-  grid.position.y = 0.02;
-  scene.add(grid);
+  if (!gameSettings.lowQuality) {
+    const grid = new THREE.GridHelper(CFG.worldSize * 2, 40, 0x2d6a35, 0x358a40);
+    grid.position.y = 0.02;
+    scene.add(grid);
+  }
+
+  const buildingSkip = gameSettings.lowQuality ? 0.38 : 0.2;
+  const maxFloorRoll = gameSettings.lowQuality ? 2 : 4;
+  const treeCount = gameSettings.lowQuality ? 18 : 40;
 
   const half = CFG.worldSize;
   const roads = [];
@@ -179,12 +226,10 @@ function buildWorld() {
   roads.forEach((coord) => {
     const rh = box(CFG.worldSize * 2, 0.15, CFG.roadWidth, COLORS.road);
     rh.position.set(0, 0.08, coord);
-    rh.receiveShadow = true;
     scene.add(rh);
 
     const rv = box(CFG.roadWidth, 0.15, CFG.worldSize * 2, COLORS.road);
     rv.position.set(coord, 0.08, 0);
-    rv.receiveShadow = true;
     scene.add(rv);
   });
 
@@ -193,13 +238,13 @@ function buildWorld() {
     for (let z = -half + CFG.blockSize; z < half - CFG.blockSize / 2; z += CFG.blockSize) {
       const nearRoad = roads.some((r) => Math.abs(x - r) < CFG.roadWidth + 6 || Math.abs(z - r) < CFG.roadWidth + 6);
       if (!nearRoad) continue;
-      if (rng() < 0.2) continue;
+      if (rng() < buildingSkip) continue;
 
       const bx = x + (rng() - 0.5) * 8;
       const bz = z + (rng() - 0.5) * 8;
       const bw = 10 + rng() * 8;
       const bd = 10 + rng() * 8;
-      const floors = 2 + Math.floor(rng() * 4);
+      const floors = 2 + Math.floor(rng() * maxFloorRoll);
       const bh = floors * 4 + 2;
       const color = COLORS.houses[ci++ % COLORS.houses.length];
 
@@ -212,13 +257,15 @@ function buildWorld() {
       roof.position.y = bh + 0.4;
       building.add(roof);
 
-      for (let f = 1; f <= floors; f++) {
-        for (const wx of [-1, 1]) {
-          for (const wz of [-1, 1]) {
-            if (rng() < 0.35) continue;
-            const win = box(1.8, 2, 0.2, rng() > 0.6 ? 0xfff9c4 : 0x37474f);
-            win.position.set(wx * (bw / 2 - 0.5), f * 4 - 1, wz * (bd / 2));
-            building.add(win);
+      if (!gameSettings.lowQuality) {
+        for (let f = 1; f <= floors; f++) {
+          for (const wx of [-1, 1]) {
+            for (const wz of [-1, 1]) {
+              if (rng() < 0.35) continue;
+              const win = box(1.8, 2, 0.2, rng() > 0.6 ? 0xfff9c4 : 0x37474f);
+              win.position.set(wx * (bw / 2 - 0.5), f * 4 - 1, wz * (bd / 2));
+              building.add(win);
+            }
           }
         }
       }
@@ -244,7 +291,7 @@ function buildWorld() {
     }
   }
 
-  for (let i = 0; i < 40; i++) {
+  for (let i = 0; i < treeCount; i++) {
     const tx = (rng() - 0.5) * CFG.worldSize * 1.6;
     const tz = (rng() - 0.5) * CFG.worldSize * 1.6;
     const tree = new THREE.Group();
@@ -337,6 +384,7 @@ function spawnNPC(type, x, z, saved = {}) {
     timer: saved.timer ?? Math.random() * 100,
     arrested: saved.arrested || false,
     fightTimer: 0,
+    animPhase: 0,
   };
   state.npcs.push(npc);
   return npc;
@@ -356,8 +404,9 @@ function restoreNPCs(savedNpcs) {
   savedNpcs.forEach((data) => {
     if (!data.type || data.arrested) return;
     const unstable = ['going', 'fighting', 'chase', 'patrol'];
-    const state = unstable.includes(data.state) ? 'idle' : data.state;
-    spawnNPC(data.type, data.x, data.z, { ...data, state });
+    const npcState = unstable.includes(data.state) ? 'idle' : data.state;
+    const timer = npcState === 'idle' ? 5 : data.timer;
+    spawnNPC(data.type, data.x, data.z, { ...data, state: npcState, timer });
   });
 }
 
@@ -394,7 +443,7 @@ function startFire(building, silent = false) {
     GameAudio.alert();
     notify('Пожар на здании! Нажми 2 или кнопку «Пожарные»', 'warn');
     pulseBtn('#btn-fire');
-    changeCityHealth(-12);
+    applyCityEvent('fireSafety', -8);
     assignFirefighter(building);
     persistGame();
   }
@@ -411,7 +460,7 @@ function extinguishFire(building) {
   GameAudio.water();
   GameAudio.star();
   notify('Пожар потушен! +15 очков', 'ok');
-  changeCityHealth(8);
+  awardSuccess('firefighter');
   persistGame();
 }
 
@@ -431,7 +480,7 @@ function spawnCriminal() {
   GameAudio.alert();
   notify('Преступник в городе! Нажми 1 или «Полиция»', 'warn');
   pulseBtn('#btn-police');
-  changeCityHealth(-8);
+  applyCityEvent('order', -6);
 }
 
 function arrestCriminal(npc, police) {
@@ -442,7 +491,7 @@ function arrestCriminal(npc, police) {
   GameAudio.arrest();
   GameAudio.siren();
   notify('Преступник арестован! +20 очков', 'ok');
-  changeCityHealth(10);
+  awardSuccess('police');
 
   setTimeout(() => {
     scene.remove(npc.mesh);
@@ -457,11 +506,11 @@ function arrestCriminal(npc, police) {
   persistGame();
 }
 
-function setWalkAnim(mesh, walking) {
+function setWalkAnim(mesh, walking, phase = 0) {
   const p = mesh.userData.parts;
   if (!p) return;
   if (walking) {
-    const s = Math.sin(animPhase * 10) * 0.5;
+    const s = Math.sin(phase * 10) * 0.5;
     p.leftLeg.rotation.x = s;
     p.rightLeg.rotation.x = -s;
     p.leftArm.rotation.x = -s;
@@ -483,17 +532,31 @@ function moveNPC(npc, tx, tz) {
     return true;
   }
 
+  const chased = npc.type === 'criminal'
+    && state.npcs.some((p) => p.type === 'police' && p.state === 'chase' && p.target === npc);
+  npc.speed = getNpcSpeed(npc, chased);
+
   const step = Math.min(npc.speed * clock.getDelta(), d);
   const nx = npc.x + (dx / d) * step;
   const nz = npc.z + (dz / d) * step;
+  const oldX = npc.x;
+  const oldZ = npc.z;
 
   if (canMove(nx, nz, 0.9)) {
     npc.x = nx;
     npc.z = nz;
   }
+
+  const moved = npc.x !== oldX || npc.z !== oldZ;
   npc.mesh.position.set(npc.x, 0, npc.z);
   npc.mesh.rotation.y = Math.atan2(dx, dz);
-  setWalkAnim(npc.mesh, true);
+
+  if (moved) {
+    npc.animPhase = (npc.animPhase ?? 0) + clock.getDelta() * 10;
+    setWalkAnim(npc.mesh, true, npc.animPhase);
+  } else {
+    setWalkAnim(npc.mesh, false);
+  }
   return false;
 }
 
@@ -519,7 +582,7 @@ function updatePolice(npc) {
       npc.target = criminals.reduce((a, b) => (dist2d(npc, a) < dist2d(npc, b) ? a : b));
       npc.state = 'chase';
     } else {
-      npc.target = { x: (Math.random() - 0.5) * 180, z: (Math.random() - 0.5) * 180 };
+      npc.target = randomPatrolTarget();
       npc.state = 'patrol';
     }
   }
@@ -541,12 +604,10 @@ function updatePolice(npc) {
 function updateCriminal(npc) {
   npc.timer--;
   if (npc.timer <= 0) {
-    npc.target = { x: (Math.random() - 0.5) * 200, z: (Math.random() - 0.5) * 200 };
+    npc.target = randomPatrolTarget();
     npc.timer = 60 + Math.random() * 80;
   }
   if (npc.target) {
-    const chased = state.npcs.some((p) => p.type === 'police' && p.state === 'chase' && p.target === npc);
-    npc.speed = chased ? 10 : 7;
     if (moveNPC(npc, npc.target.x, npc.target.z)) npc.target = null;
   }
 }
@@ -555,7 +616,7 @@ function updateFirefighter(npc) {
   if (npc.state === 'idle') {
     npc.timer--;
     if (npc.timer <= 0) {
-      npc.target = { x: (Math.random() - 0.5) * 160, z: (Math.random() - 0.5) * 160 };
+      npc.target = randomPatrolTarget();
       npc.state = 'patrol';
       npc.timer = 80;
     }
@@ -565,7 +626,7 @@ function updateFirefighter(npc) {
   if (npc.state === 'going' && npc.target) {
     if (dist2d(npc, npc.target) < 8) {
       npc.state = 'fighting';
-      npc.fightTimer = 100;
+      npc.fightTimer = Math.max(30, Math.floor(100 / getMultiplier('firefighter')));
       return;
     }
     moveNPC(npc, npc.target.x, npc.target.z);
@@ -592,7 +653,7 @@ function updateFirefighter(npc) {
 function updateCivilian(npc) {
   npc.timer--;
   if (npc.timer <= 0) {
-    npc.target = { x: (Math.random() - 0.5) * 200, z: (Math.random() - 0.5) * 200 };
+    npc.target = randomPatrolTarget();
     npc.timer = 80 + Math.random() * 100;
   }
   if (npc.target && moveNPC(npc, npc.target.x, npc.target.z)) npc.target = null;
@@ -648,8 +709,8 @@ function updateEvents() {
   updateMissionUI();
 }
 
-function initPlayer(pos) {
-  player = createCharacter({ shirt: 0x00b06f, pants: 0x2d3436, skin: COLORS.skin, hat: 0x0984e3 });
+function initPlayer(pos, savedPlayer = {}) {
+  player = createCharacter({ shirt: 0x00b06f, pants: 0x2d3436, skin: COLORS.skin });
   const valid = pos && Number.isFinite(pos.x) && Number.isFinite(pos.z);
   if (valid) {
     player.position.set(pos.x, pos.y ?? 0, pos.z);
@@ -658,18 +719,21 @@ function initPlayer(pos) {
     player.position.set(spawn.x, 0, spawn.z);
   }
   scene.add(player);
+  const tier = savedPlayer.outfitTier ?? getTier('player');
+  applyOutfit(player, tier);
 }
 
 function collectGameState() {
+  const snapshot = getSnapshot();
   return {
     worldSeed,
-    influence: { ...state.influence },
+    influence: snapshot.influence,
     player: {
       x: player.position.x,
       y: player.position.y,
       z: player.position.z,
       rotationY: player.rotation.y,
-      outfitTier: 0,
+      outfitTier: snapshot.playerTier,
       isMilitary: false,
     },
     npcs: state.npcs.map((n) => ({
@@ -684,14 +748,8 @@ function collectGameState() {
     events: state.buildings
       .filter((b) => b.onFire)
       .map((b) => ({ id: `fire-${b.id}`, type: 'fire', buildingId: b.id })),
-    cityStats: {
-      safety: state.cityHealth,
-      order: state.cityHealth,
-      transport: state.cityHealth,
-      fireSafety: state.cityHealth,
-    },
+    cityStats: snapshot.cityStats,
     score: state.score,
-    cityHealth: state.cityHealth,
     camYaw: state.camYaw,
     camPitch: state.camPitch,
     lastFire: state.lastFire,
@@ -701,6 +759,7 @@ function collectGameState() {
 
 function persistGame(force = false) {
   if (sessionStorage.getItem('chelblox_restarting')) return;
+  if (sessionStorage.getItem('chelblox_settings_reload')) return;
   if (!force && !state.running) return;
   if (!player) return;
   save(collectGameState());
@@ -708,16 +767,14 @@ function persistGame(force = false) {
 }
 
 function applySave(data) {
-  state.influence = { ...state.influence, ...data.influence };
+  initInfluence(data, onInfluenceChange);
   state.score = data.score ?? 0;
-  state.cityHealth = data.cityHealth ?? data.cityStats?.safety ?? 100;
   state.camYaw = data.camYaw ?? 0;
   state.camPitch = data.camPitch ?? 0.25;
   state.lastFire = data.lastFire ?? performance.now();
   state.lastCrime = data.lastCrime ?? performance.now() - 8000;
 
   $('#score').textContent = state.score;
-  changeCityHealth(0);
 
   const savedNpcs = data.npcs || [];
   const maxId = savedNpcs.reduce((max, n) => {
@@ -726,7 +783,7 @@ function applySave(data) {
   }, 0);
   npcIdCounter = maxId;
 
-  initPlayer(data.player);
+  initPlayer(data.player, data.player);
   if (data.player?.rotationY != null) player.rotation.y = data.player.rotationY;
   restoreNPCs(savedNpcs);
   snapCamera();
@@ -771,8 +828,8 @@ function updatePlayer(dt) {
     if (canMove(nx, player.position.z)) player.position.x = nx;
     if (canMove(player.position.x, nz)) player.position.z = nz;
     player.rotation.y = Math.atan2(mx, mz);
-    setWalkAnim(player, true);
-    animPhase += dt * ((state.sprint || state.keys.ShiftLeft) ? 14 : 10);
+    setWalkAnim(player, true, playerAnimPhase);
+    playerAnimPhase += dt * ((state.sprint || state.keys.ShiftLeft) ? 14 : 10);
     if (Math.random() < 0.05) GameAudio.step();
   } else {
     setWalkAnim(player, false);
@@ -862,16 +919,6 @@ function addScore(n) {
   $('#score').textContent = state.score;
 }
 
-function changeCityHealth(d) {
-  state.cityHealth = clamp(state.cityHealth + d, 0, 100);
-  $('#city-bar').style.width = `${state.cityHealth}%`;
-  $('#city-pct').textContent = `${state.cityHealth}%`;
-  const bar = $('#city-bar');
-  if (state.cityHealth > 60) bar.style.background = 'linear-gradient(90deg, #00b06f, #3fb950)';
-  else if (state.cityHealth > 30) bar.style.background = 'linear-gradient(90deg, #d29922, #e3b341)';
-  else bar.style.background = 'linear-gradient(90deg, #f85149, #da3633)';
-}
-
 function updateMissionUI() {
   const crimes = state.npcs.filter((n) => n.type === 'criminal' && !n.arrested).length;
   const fires = state.buildings.filter((b) => b.onFire).length;
@@ -893,7 +940,28 @@ function flashBtn(sel) {
   setTimeout(() => b.classList.remove('active'), 200);
 }
 
+function syncSettingsUI() {
+  document.querySelectorAll('.setting-low-quality').forEach((el) => {
+    el.checked = gameSettings.lowQuality;
+  });
+}
+
+function onLowQualityToggle(checked) {
+  if (checked === gameSettings.lowQuality) return;
+  saveSettings({ lowQuality: checked });
+  sessionStorage.setItem('chelblox_settings_reload', '1');
+  location.reload();
+}
+
+function setupSettingsUI() {
+  syncSettingsUI();
+  document.querySelectorAll('.setting-low-quality').forEach((el) => {
+    el.addEventListener('change', (e) => onLowQualityToggle(e.target.checked));
+  });
+}
+
 function setupInput() {
+  setupSettingsUI();
   window.addEventListener('keydown', (e) => {
     state.keys[e.code] = true;
     if (e.code === 'Space') { e.preventDefault(); doJump(); }
@@ -1008,24 +1076,30 @@ function initScene() {
 
   camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.5, 500);
 
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: !gameSettings.lowQuality });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.setPixelRatio(
+    gameSettings.lowQuality ? 1 : Math.min(window.devicePixelRatio, 2),
+  );
+  renderer.shadowMap.enabled = !gameSettings.lowQuality;
+  if (!gameSettings.lowQuality) {
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  }
 
   scene.add(new THREE.AmbientLight(0xffffff, 0.55));
 
   const sun = new THREE.DirectionalLight(0xfff5e0, 1.1);
   sun.position.set(80, 120, 60);
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
-  sun.shadow.camera.near = 10;
-  sun.shadow.camera.far = 400;
-  sun.shadow.camera.left = -150;
-  sun.shadow.camera.right = 150;
-  sun.shadow.camera.top = 150;
-  sun.shadow.camera.bottom = -150;
+  if (!gameSettings.lowQuality) {
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.camera.near = 10;
+    sun.shadow.camera.far = 400;
+    sun.shadow.camera.left = -150;
+    sun.shadow.camera.right = 150;
+    sun.shadow.camera.top = 150;
+    sun.shadow.camera.bottom = -150;
+  }
   scene.add(sun);
 
   clock = new THREE.Clock();
@@ -1104,6 +1178,10 @@ async function bootstrap() {
   registerSaveHandlers();
   exposeTestApi();
   sessionStorage.removeItem('chelblox_restarting');
+  sessionStorage.removeItem('chelblox_settings_reload');
+
+  initInfluenceHUD();
+  initInfluence({}, onInfluenceChange);
 
   let saved = null;
   const savedSession = hasSave();
@@ -1163,7 +1241,13 @@ function exposeTestApi() {
       }
     },
     getScore: () => state.score,
-    getInfluence: () => ({ ...state.influence }),
+    getInfluence: () => getAllInfluence(),
+    getCityStats: () => getCityStats(),
+    getOutfitTier: () => (player ? getOutfitTier(player) : 0),
+    getNpcAnimPhases: () => state.npcs.map((n) => ({ id: n.id, phase: n.animPhase ?? 0 })),
+    getMultiplier: (type) => getMultiplier(type),
+    addInfluence: (type, amount) => addInfluence(type, amount),
+    getSettings: () => ({ ...gameSettings }),
   };
 }
 

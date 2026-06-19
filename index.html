@@ -27,8 +27,8 @@
       </div>
       <div class="stat-pill">
         <span class="stat-label">Город</span>
-        <div class="bar-wrap"><div class="bar-fill" id="city-bar"></div></div>
-        <span class="stat-value small" id="city-pct">100%</span>
+        <div class="bar-wrap"><div class="bar-fill" id="city-index-bar"></div></div>
+        <span class="stat-value small" id="city-index-pct">50%</span>
       </div>
       <div class="top-actions">
         <button class="icon-btn" id="btn-sound" title="Звук">🔊</button>
@@ -54,6 +54,55 @@
           <strong>Пожары</strong>
           <span id="fire-count">0 активных</span>
         </div>
+      </div>
+    </aside>
+
+    <aside id="influence-panel">
+      <h3>Ты</h3>
+      <div class="inf-block">
+        <div class="inf-head">
+          <span class="inf-icon">⭐</span>
+          <span class="inf-title" id="player-tier-label">Новичок</span>
+          <span class="inf-pct" id="player-pct">0%</span>
+        </div>
+        <div class="bar-wrap wide"><div class="bar-fill" id="player-bar"></div></div>
+        <p class="inf-hint" id="player-next-tier">До след. уровня: 25</p>
+      </div>
+
+      <h3>Службы</h3>
+      <div class="inf-block">
+        <div class="inf-head"><span class="inf-icon">🚒</span><span class="inf-title">Пожарные</span><span class="inf-pct" id="inf-fire-pct">0%</span></div>
+        <div class="bar-wrap wide"><div class="bar-fill" id="inf-fire"></div></div>
+      </div>
+      <div class="inf-block">
+        <div class="inf-head"><span class="inf-icon">🚔</span><span class="inf-title">Полиция</span><span class="inf-pct" id="inf-police-pct">0%</span></div>
+        <div class="bar-wrap wide"><div class="bar-fill" id="inf-police"></div></div>
+      </div>
+      <div class="inf-block">
+        <div class="inf-head"><span class="inf-icon">🚕</span><span class="inf-title">Такси</span><span class="inf-pct" id="inf-taxi-pct">0%</span></div>
+        <div class="bar-wrap wide"><div class="bar-fill" id="inf-taxi"></div></div>
+      </div>
+      <div class="inf-block">
+        <div class="inf-head"><span class="inf-icon">🪖</span><span class="inf-title">Военные</span><span class="inf-pct" id="inf-military-pct">0%</span></div>
+        <div class="bar-wrap wide"><div class="bar-fill" id="inf-military"></div></div>
+      </div>
+
+      <h3>Состояние города</h3>
+      <div class="inf-block compact">
+        <div class="inf-head"><span class="inf-title">Пожары</span><span class="inf-pct" id="city-fire-pct">50%</span></div>
+        <div class="bar-wrap wide"><div class="bar-fill" id="city-fire"></div></div>
+      </div>
+      <div class="inf-block compact">
+        <div class="inf-head"><span class="inf-title">Порядок</span><span class="inf-pct" id="city-order-pct">50%</span></div>
+        <div class="bar-wrap wide"><div class="bar-fill" id="city-order"></div></div>
+      </div>
+      <div class="inf-block compact">
+        <div class="inf-head"><span class="inf-title">Транспорт</span><span class="inf-pct" id="city-transport-pct">50%</span></div>
+        <div class="bar-wrap wide"><div class="bar-fill" id="city-transport"></div></div>
+      </div>
+      <div class="inf-block compact">
+        <div class="inf-head"><span class="inf-title">Безопасность</span><span class="inf-pct" id="city-safety-pct">50%</span></div>
+        <div class="bar-wrap wide"><div class="bar-fill" id="city-safety"></div></div>
       </div>
     </aside>
 
@@ -101,6 +150,10 @@
         <li>Пожарные тушат пожары на зданиях</li>
         <li>Машины ездят по улицам</li>
       </ul>
+      <label class="settings-row" for="setting-low-quality-start">
+        <input type="checkbox" id="setting-low-quality-start" class="setting-low-quality" data-testid="setting-low-quality-start">
+        <span>Низкие настройки (меньше лагов)</span>
+      </label>
       <button class="primary-btn" id="btn-play" data-testid="btn-play">Играть</button>
       <p class="note">После нажатия кликни по экрану, чтобы управлять мышью</p>
     </div>
@@ -126,6 +179,11 @@
   <div id="overlay-pause" class="overlay hidden" data-testid="overlay-pause">
     <div class="panel">
       <h2>Пауза</h2>
+      <label class="settings-row pause-settings" for="setting-low-quality">
+        <input type="checkbox" id="setting-low-quality" class="setting-low-quality" data-testid="setting-low-quality">
+        <span>Низкие настройки (меньше лагов)</span>
+      </label>
+      <p class="settings-note">Изменение применится после перезагрузки страницы</p>
       <button class="primary-btn" id="btn-resume">Продолжить</button>
       <button class="secondary-btn" id="btn-restart" data-testid="btn-restart">Начать игру сначала</button>
     </div>
