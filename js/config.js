@@ -2,6 +2,9 @@ export const SAVE_KEY = 'chelblox_save_v1';
 export const SAVE_VERSION = 1;
 export const AUTOSAVE_INTERVAL_MS = 3000;
 
+export const GAME_NAME_RU = 'ЧелБлокс';
+export const GAME_NAME_EN = 'ChelBlox';
+
 export const SPAWN_CONFIG = {
   police: { min: 2, max: 5 },
   firefighter: { min: 1, max: 3 },

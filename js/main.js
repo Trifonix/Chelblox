@@ -1,10 +1,10 @@
 import * as THREE from 'three';
-import { AUTOSAVE_INTERVAL_MS, SPAWN_CONFIG } from './config.js';
+import { AUTOSAVE_INTERVAL_MS, GAME_NAME_RU, SPAWN_CONFIG } from './config.js';
 import { clear, hasSave, load, save } from './storage.js';
 import { getRandomSpawn, initSpawnSystem } from './world.js';
 
 /* ═══════════════════════════════════════════
-   БлокСити 3D — Roblox-style city game
+   ЧелБлокс — Roblox-style city game
    ═══════════════════════════════════════════ */
 
 const $ = (s) => document.querySelector(s);
@@ -1067,7 +1067,7 @@ function startGame(opts = {}) {
   animate();
 
   if (resumed) notify('Сессия восстановлена', 'info');
-  else notify('Добро пожаловать в БлокСити!', 'ok');
+  else notify(`Добро пожаловать в ${GAME_NAME_RU}!`, 'ok');
 
   persistGame(true);
 }
