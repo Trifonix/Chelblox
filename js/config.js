@@ -33,3 +33,19 @@ export const CITY_STAT_LABELS = {
   transport: 'Транспорт',
   safety: 'Безопасность',
 };
+
+/** Красный костюм — только у пожарных (PROJECT.md). */
+export const FIREFIGHTER_COLORS = {
+  suit: 0xc62828,
+  helmet: 0xffd600,
+};
+
+export const NPC_CHARACTER_COLORS = {
+  police: { shirt: 0x1565c0, pants: 0x212121 },
+  criminal: { shirt: 0x424242, pants: 0x212121 },
+  firefighter: { shirt: FIREFIGHTER_COLORS.suit, pants: FIREFIGHTER_COLORS.suit },
+  civilian: {
+    pants: 0x37474f,
+    shirts: [0x9b59b6, 0x3498db, 0x2ecc71, 0xf39c12, 0x1abc9c, 0xe91e63, 0x795548, 0x607d8b],
+  },
+};

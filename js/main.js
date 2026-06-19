@@ -1,8 +1,10 @@
 import * as THREE from 'three';
 import {
   AUTOSAVE_INTERVAL_MS,
+  FIREFIGHTER_COLORS,
   GAME_NAME_RU,
   INFLUENCE_CONFIG,
+  NPC_CHARACTER_COLORS,
   SAVE_KEY,
   SPAWN_CONFIG,
 } from './config.js';
@@ -190,7 +192,7 @@ function createCharacter(opts) {
     g.add(mask);
   }
   if (opts.type === 'firefighter') {
-    const helmet = box(1.35, 0.5, 1.35, 0xffd600);
+    const helmet = box(1.35, 0.5, 1.35, FIREFIGHTER_COLORS.helmet);
     helmet.position.y = 5.35;
     g.add(helmet);
   }
@@ -358,13 +360,14 @@ function nextNpcId(type) {
 }
 
 function spawnNPC(type, x, z, saved = {}) {
+  const civShirts = NPC_CHARACTER_COLORS.civilian.shirts;
   const configs = {
-    police: { shirt: 0x1565c0, pants: 0x212121, skin: COLORS.skin, type: 'police' },
-    criminal: { shirt: 0x424242, pants: 0x212121, skin: COLORS.skin, type: 'criminal' },
-    firefighter: { shirt: 0xe65100, pants: 0x212121, skin: COLORS.skin, type: 'firefighter' },
+    police: { ...NPC_CHARACTER_COLORS.police, skin: COLORS.skin, type: 'police' },
+    criminal: { ...NPC_CHARACTER_COLORS.criminal, skin: COLORS.skin, type: 'criminal' },
+    firefighter: { ...NPC_CHARACTER_COLORS.firefighter, skin: COLORS.skin, type: 'firefighter' },
     civilian: {
-      shirt: COLORS.houses[Math.floor(Math.random() * COLORS.houses.length)],
-      pants: 0x37474f,
+      shirt: civShirts[Math.floor(Math.random() * civShirts.length)],
+      pants: NPC_CHARACTER_COLORS.civilian.pants,
       skin: COLORS.skin,
     },
   };
