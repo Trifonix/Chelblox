@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>БлокСити 3D</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+
+  <div id="ui">
+    <header id="top-bar">
+      <div class="logo">Блок<span>Сити</span></div>
+      <div class="stat-pill">
+        <span class="stat-label">Очки</span>
+        <span class="stat-value" id="score">0</span>
+      </div>
+      <div class="stat-pill">
+        <span class="stat-label">Город</span>
+        <div class="bar-wrap"><div class="bar-fill" id="city-bar"></div></div>
+        <span class="stat-value small" id="city-pct">100%</span>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" id="btn-sound" title="Звук">🔊</button>
+        <button class="icon-btn" id="btn-help" title="Управление">?</button>
+        <button class="icon-btn" id="btn-pause" title="Пауза">⏸</button>
+      </div>
+    </header>
+
+    <div id="notifications"></div>
+
+    <aside id="mission-panel">
+      <h3>Задания</h3>
+      <div class="mission" id="mission-crime">
+        <span class="mission-icon">🚔</span>
+        <div class="mission-text">
+          <strong>Преступники</strong>
+          <span id="crime-count">0 активных</span>
+        </div>
+      </div>
+      <div class="mission" id="mission-fire">
+        <span class="mission-icon">🔥</span>
+        <div class="mission-text">
+          <strong>Пожары</strong>
+          <span id="fire-count">0 активных</span>
+        </div>
+      </div>
+    </aside>
+
+    <footer id="bottom-bar">
+      <div class="action-group">
+        <button class="action-btn" id="btn-police">
+          <span class="action-key">1</span>
+          <span class="action-label">Полиция</span>
+        </button>
+        <button class="action-btn" id="btn-fire">
+          <span class="action-key">2</span>
+          <span class="action-label">Пожарные</span>
+        </button>
+        <button class="action-btn" id="btn-sprint">
+          <span class="action-key">Shift</span>
+          <span class="action-label">Бег</span>
+        </button>
+        <button class="action-btn" id="btn-jump">
+          <span class="action-key">Пробел</span>
+          <span class="action-label">Прыжок</span>
+        </button>
+        <button class="action-btn" id="btn-camera">
+          <span class="action-key">C</span>
+          <span class="action-label">Камера</span>
+        </button>
+      </div>
+      <div id="hint-bar">WASD — движение · Мышь — обзор · Пробел — прыжок</div>
+    </footer>
+  </div>
+
+  <div id="overlay-start" class="overlay">
+    <div class="panel start-panel">
+      <h1>Блок<span>Сити</span> 3D</h1>
+      <p class="subtitle">Городской симулятор в стиле Roblox</p>
+      <ul class="feature-list">
+        <li>Ходи по 3D-городу от третьего лица</li>
+        <li>Полиция ловит преступников</li>
+        <li>Пожарные тушат пожары на зданиях</li>
+        <li>Машины ездят по улицам</li>
+      </ul>
+      <button class="primary-btn" id="btn-play">Играть</button>
+      <p class="note">После нажатия кликни по экрану, чтобы управлять мышью</p>
+    </div>
+  </div>
+
+  <div id="overlay-help" class="overlay hidden">
+    <div class="panel">
+      <h2>Управление</h2>
+      <table class="controls-table">
+        <tr><td>W A S D</td><td>Движение персонажа</td></tr>
+        <tr><td>Мышь</td><td>Осмотреться (зажми ЛКМ или захвати курсор)</td></tr>
+        <tr><td>Пробел</td><td>Прыжок</td></tr>
+        <tr><td>Shift</td><td>Бег</td></tr>
+        <tr><td>1</td><td>Вызвать полицию к преступникам</td></tr>
+        <tr><td>2</td><td>Отправить пожарных к пожарам</td></tr>
+        <tr><td>C</td><td>Сбросить камеру</td></tr>
+        <tr><td>Esc</td><td>Пауза / отпустить мышь</td></tr>
+      </table>
+      <button class="primary-btn" id="btn-help-close">Понятно</button>
+    </div>
+  </div>
+
+  <div id="overlay-pause" class="overlay hidden">
+    <div class="panel">
+      <h2>Пауза</h2>
+      <button class="primary-btn" id="btn-resume">Продолжить</button>
+      <button class="secondary-btn" id="btn-restart">Начать заново</button>
+    </div>
+  </div>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"
+    }
+  }
+  </script>
+  <script src="js/audio.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
