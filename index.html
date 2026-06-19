@@ -33,7 +33,7 @@
       <div class="top-actions">
         <button class="icon-btn" id="btn-sound" title="Звук">🔊</button>
         <button class="icon-btn" id="btn-help" title="Управление">?</button>
-        <button class="icon-btn" id="btn-pause" title="Пауза">⏸</button>
+        <button class="icon-btn" id="btn-pause" data-testid="btn-pause" title="Пауза">⏸</button>
       </div>
     </header>
 
@@ -84,14 +84,14 @@
     </footer>
   </div>
 
-  <div id="overlay-loading" class="overlay overlay-loading hidden">
+  <div id="overlay-loading" class="overlay overlay-loading hidden" data-testid="overlay-loading">
     <div class="loading-panel">
       <div class="loader-spinner" aria-hidden="true"></div>
       <p class="loading-text">Загрузка города…</p>
     </div>
   </div>
 
-  <div id="overlay-start" class="overlay hidden">
+  <div id="overlay-start" class="overlay hidden" data-testid="overlay-start">
     <div class="panel start-panel">
       <h1>Чел<span>Блокс</span></h1>
       <p class="subtitle">Городской симулятор в стиле Roblox</p>
@@ -101,7 +101,7 @@
         <li>Пожарные тушат пожары на зданиях</li>
         <li>Машины ездят по улицам</li>
       </ul>
-      <button class="primary-btn" id="btn-play">Играть</button>
+      <button class="primary-btn" id="btn-play" data-testid="btn-play">Играть</button>
       <p class="note">После нажатия кликни по экрану, чтобы управлять мышью</p>
     </div>
   </div>
@@ -123,11 +123,11 @@
     </div>
   </div>
 
-  <div id="overlay-pause" class="overlay hidden">
+  <div id="overlay-pause" class="overlay hidden" data-testid="overlay-pause">
     <div class="panel">
       <h2>Пауза</h2>
       <button class="primary-btn" id="btn-resume">Продолжить</button>
-      <button class="secondary-btn" id="btn-restart">Начать игру сначала</button>
+      <button class="secondary-btn" id="btn-restart" data-testid="btn-restart">Начать игру сначала</button>
     </div>
   </div>
 

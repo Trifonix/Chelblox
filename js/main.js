@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { AUTOSAVE_INTERVAL_MS, GAME_NAME_RU, SPAWN_CONFIG } from './config.js';
+import { AUTOSAVE_INTERVAL_MS, GAME_NAME_RU, SAVE_KEY, SPAWN_CONFIG } from './config.js';
 import { clear, hasSave, load, save } from './storage.js';
 import { getRandomSpawn, initSpawnSystem } from './world.js';
 
@@ -700,6 +700,7 @@ function collectGameState() {
 }
 
 function persistGame(force = false) {
+  if (sessionStorage.getItem('chelblox_restarting')) return;
   if (!force && !state.running) return;
   if (!player) return;
   save(collectGameState());
@@ -963,6 +964,7 @@ function setupInput() {
   $('#btn-pause').addEventListener('click', togglePause);
   $('#btn-resume').addEventListener('click', () => { togglePause(false); GameAudio.button(); });
   $('#btn-restart').addEventListener('click', () => {
+    sessionStorage.setItem('chelblox_restarting', '1');
     clear();
     location.reload();
   });
@@ -1100,6 +1102,8 @@ function registerSaveHandlers() {
 async function bootstrap() {
   setupInput();
   registerSaveHandlers();
+  exposeTestApi();
+  sessionStorage.removeItem('chelblox_restarting');
 
   let saved = null;
   const savedSession = hasSave();
@@ -1129,6 +1133,38 @@ async function bootstrap() {
     hideLoading();
     showStartScreen();
   }
+}
+
+function exposeTestApi() {
+  if (!new URLSearchParams(location.search).has('e2e')) return;
+
+  window.__CHELBLOX_TEST__ = {
+    isRunning: () => state.running,
+    getPlayerPosition: () => (
+      player
+        ? { x: player.position.x, y: player.position.y, z: player.position.z, rotationY: player.rotation.y }
+        : null
+    ),
+    getNpcs: () => state.npcs.map((n) => ({ id: n.id, type: n.type, x: n.x, z: n.z })),
+    getNpcCounts: () => state.npcs.reduce((acc, n) => {
+      acc[n.type] = (acc[n.type] || 0) + 1;
+      return acc;
+    }, {}),
+    getWorldSeed: () => worldSeed,
+    getSpawnConfig: () => ({ ...SPAWN_CONFIG }),
+    isPositionSafe: (x, z, r = CFG.playerRadius) => canMove(x, z, r),
+    flushSave: () => persistGame(true),
+    getLocalSave: () => {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    },
+    getScore: () => state.score,
+    getInfluence: () => ({ ...state.influence }),
+  };
 }
 
 bootstrap();
