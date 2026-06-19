@@ -3,11 +3,16 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "serve -l 4173 .",
+    "preview": "serve -l 4173 .",
+    "deploy": "vercel --prod",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:headed": "playwright test --headed"
   },
   "devDependencies": {
-    "@playwright/test": "1.61.0"
+    "@playwright/test": "1.61.0",
+    "serve": "^14.2.4",
+    "vercel": "^41.4.0"
   }
 }
