@@ -639,6 +639,7 @@ function collectGameState() {
       x: player.position.x,
       y: player.position.y,
       z: player.position.z,
+      rotationY: player.rotation.y,
       outfitTier: 0,
       isMilitary: false,
     },
@@ -669,8 +670,9 @@ function collectGameState() {
   };
 }
 
-function persistGame() {
-  if (!state.running) return;
+function persistGame(force = false) {
+  if (!force && !state.running) return;
+  if (!player) return;
   save(collectGameState());
   state.lastSave = performance.now();
 }
@@ -695,7 +697,9 @@ function applySave(data) {
   npcIdCounter = maxId;
 
   initPlayer(data.player);
+  if (data.player?.rotationY != null) player.rotation.y = data.player.rotationY;
   restoreNPCs(savedNpcs);
+  snapCamera();
 
   (data.events || []).forEach((event) => {
     if (event.type !== 'fire') return;
@@ -767,6 +771,22 @@ function updateCamera() {
   const cz = pz + Math.cos(yaw) * Math.cos(pitch) * CFG.camDist;
 
   camera.position.lerp(new THREE.Vector3(cx, cy, cz), 0.15);
+  camera.lookAt(px, py + 3, pz);
+}
+
+function snapCamera() {
+  if (!player || !camera) return;
+  const px = player.position.x;
+  const py = player.position.y;
+  const pz = player.position.z;
+  const pitch = state.camPitch;
+  const yaw = state.camYaw;
+
+  const cx = px + Math.sin(yaw) * Math.cos(pitch) * CFG.camDist;
+  const cy = py + CFG.camHeight + Math.sin(pitch) * CFG.camDist;
+  const cz = pz + Math.cos(yaw) * Math.cos(pitch) * CFG.camDist;
+
+  camera.position.set(cx, cy, cz);
   camera.lookAt(px, py + 3, pz);
 }
 
@@ -921,6 +941,25 @@ function setupInput() {
   window.addEventListener('resize', onResize);
 }
 
+function showLoading() {
+  $('#overlay-start').classList.add('hidden');
+  $('#overlay-loading').classList.remove('hidden');
+}
+
+function hideLoading() {
+  $('#overlay-loading').classList.add('hidden');
+}
+
+function showStartScreen() {
+  $('#overlay-loading').classList.add('hidden');
+  $('#overlay-start').classList.remove('hidden');
+}
+
+function hideAllOverlays() {
+  $('#overlay-start').classList.add('hidden');
+  $('#overlay-loading').classList.add('hidden');
+}
+
 function togglePause(force) {
   state.paused = force !== undefined ? force : !state.paused;
   $('#overlay-pause').classList.toggle('hidden', !state.paused);
@@ -972,11 +1011,12 @@ function onResize() {
 }
 
 function startGame(opts = {}) {
-  const { skipOverlay = false, resumed = false } = opts;
+  const { resumed = false } = opts;
 
   if (!resumed) {
     initPlayer();
     initNPCsRandom();
+    snapCamera();
   }
 
   state.running = true;
@@ -986,7 +1026,7 @@ function startGame(opts = {}) {
   }
   state.lastSave = performance.now();
 
-  if (skipOverlay || !resumed) $('#overlay-start').classList.add('hidden');
+  hideAllOverlays();
 
   GameAudio.init();
   GameAudio.startMusic();
@@ -996,7 +1036,7 @@ function startGame(opts = {}) {
   if (resumed) notify('Сессия восстановлена', 'info');
   else notify('Добро пожаловать в БлокСити!', 'ok');
 
-  persistGame();
+  persistGame(true);
 }
 
 function animate() {
@@ -1017,17 +1057,30 @@ function animate() {
 
 function bootstrap() {
   setupInput();
+
+  window.addEventListener('pagehide', () => persistGame(true));
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') persistGame(true);
+  });
+
+  const savedSession = hasSave();
+  if (savedSession) showLoading();
+  else showStartScreen();
+
   initScene();
   onResize();
 
-  if (hasSave()) {
+  if (savedSession) {
     const saved = load();
     if (saved) {
       applySave(saved);
-      startGame({ skipOverlay: true, resumed: true });
+      hideLoading();
+      startGame({ resumed: true });
       return;
     }
     clear();
+    hideLoading();
+    showStartScreen();
   }
 }
 
