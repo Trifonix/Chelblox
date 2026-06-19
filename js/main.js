@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { AUTOSAVE_INTERVAL_MS, SPAWN_CONFIG } from './config.js';
+import { clear, hasSave, load, save } from './storage.js';
+import { getRandomSpawn, initSpawnSystem } from './world.js';
 
 /* ═══════════════════════════════════════════
    БлокСити 3D — Roblox-style city game
@@ -31,6 +34,13 @@ const state = {
   paused: false,
   score: 0,
   cityHealth: 100,
+  influence: {
+    player: 0,
+    firefighter: 0,
+    police: 0,
+    taxi: 0,
+    military: 0,
+  },
   keys: {},
   mouseDown: false,
   pointerLocked: false,
@@ -43,7 +53,10 @@ const state = {
   cars: [],
   lastFire: 0,
   lastCrime: 0,
+  lastSave: 0,
 };
+
+let npcIdCounter = 0;
 
 let scene, camera, renderer, clock;
 let player;
@@ -187,6 +200,7 @@ function buildWorld() {
       scene.add(building);
 
       state.buildings.push({
+        id: `b-${state.buildings.length}`,
         mesh: building,
         x: bx,
         z: bz,
@@ -264,7 +278,12 @@ function setupCars() {
   createCar(0x9b59b6, mkPath([80, 120], [80, -120]), 0.15);
 }
 
-function spawnNPC(type, x, z) {
+function nextNpcId(type) {
+  npcIdCounter += 1;
+  return `${type}-${npcIdCounter}`;
+}
+
+function spawnNPC(type, x, z, saved = {}) {
   const configs = {
     police: { shirt: 0x1565c0, pants: 0x212121, skin: COLORS.skin, type: 'police' },
     criminal: { shirt: 0x424242, pants: 0x212121, skin: COLORS.skin, type: 'criminal' },
@@ -280,26 +299,39 @@ function spawnNPC(type, x, z) {
   scene.add(mesh);
 
   const npc = {
+    id: saved.id || nextNpcId(type),
     type,
     mesh,
     x,
     z,
     speed: type === 'criminal' ? 7 : 6,
     target: null,
-    state: 'idle',
-    timer: Math.random() * 100,
-    arrested: false,
+    state: saved.state || 'idle',
+    timer: saved.timer ?? Math.random() * 100,
+    arrested: saved.arrested || false,
     fightTimer: 0,
   };
   state.npcs.push(npc);
   return npc;
 }
 
-function initNPCs() {
-  for (let i = 0; i < 3; i++) spawnNPC('police', -30 + i * 30, 20);
-  for (let i = 0; i < 2; i++) spawnNPC('firefighter', 40 + i * 30, -30);
-  for (let i = 0; i < 5; i++) spawnNPC('civilian', (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200);
-  for (let i = 0; i < 2; i++) spawnNPC('criminal', 50 + i * 40, 50);
+function initNPCsRandom() {
+  for (const [type, cfg] of Object.entries(SPAWN_CONFIG)) {
+    const count = cfg.min + Math.floor(Math.random() * (cfg.max - cfg.min + 1));
+    for (let i = 0; i < count; i++) {
+      const pos = getRandomSpawn(0.9);
+      spawnNPC(type, pos.x, pos.z);
+    }
+  }
+}
+
+function restoreNPCs(savedNpcs) {
+  savedNpcs.forEach((data) => {
+    if (!data.type || data.arrested) return;
+    const unstable = ['going', 'fighting', 'chase', 'patrol'];
+    const state = unstable.includes(data.state) ? 'idle' : data.state;
+    spawnNPC(data.type, data.x, data.z, { ...data, state });
+  });
 }
 
 function canMove(x, z, r = CFG.playerRadius) {
@@ -311,7 +343,7 @@ function canMove(x, z, r = CFG.playerRadius) {
   return true;
 }
 
-function startFire(building) {
+function startFire(building, silent = false) {
   if (building.onFire) return;
   building.onFire = true;
 
@@ -330,12 +362,15 @@ function startFire(building) {
   building.mesh.add(fg);
   building.fireGroup = fg;
 
-  GameAudio.fire();
-  GameAudio.alert();
-  notify('Пожар на здании! Нажми 2 или кнопку «Пожарные»', 'warn');
-  pulseBtn('#btn-fire');
-  changeCityHealth(-12);
-  assignFirefighter(building);
+  if (!silent) {
+    GameAudio.fire();
+    GameAudio.alert();
+    notify('Пожар на здании! Нажми 2 или кнопку «Пожарные»', 'warn');
+    pulseBtn('#btn-fire');
+    changeCityHealth(-12);
+    assignFirefighter(building);
+    persistGame();
+  }
 }
 
 function extinguishFire(building) {
@@ -350,6 +385,7 @@ function extinguishFire(building) {
   GameAudio.star();
   notify('Пожар потушен! +15 очков', 'ok');
   changeCityHealth(8);
+  persistGame();
 }
 
 function assignFirefighter(building) {
@@ -363,7 +399,8 @@ function assignFirefighter(building) {
 function spawnCriminal() {
   const active = state.npcs.filter((n) => n.type === 'criminal' && !n.arrested);
   if (active.length >= 5) return;
-  spawnNPC('criminal', (Math.random() - 0.5) * 200, (Math.random() - 0.5) * 200);
+  const pos = getRandomSpawn(0.9);
+  spawnNPC('criminal', pos.x, pos.z);
   GameAudio.alert();
   notify('Преступник в городе! Нажми 1 или «Полиция»', 'warn');
   pulseBtn('#btn-police');
@@ -390,6 +427,7 @@ function arrestCriminal(npc, police) {
     police.target = null;
     police.timer = 80;
   }
+  persistGame();
 }
 
 function setWalkAnim(mesh, walking) {
@@ -583,10 +621,90 @@ function updateEvents() {
   updateMissionUI();
 }
 
-function initPlayer() {
+function initPlayer(pos) {
   player = createCharacter({ shirt: 0x00b06f, pants: 0x2d3436, skin: COLORS.skin, hat: 0x0984e3 });
-  player.position.set(0, 0, 30);
+  if (pos) {
+    player.position.set(pos.x, pos.y ?? 0, pos.z);
+  } else {
+    const spawn = getRandomSpawn();
+    player.position.set(spawn.x, 0, spawn.z);
+  }
   scene.add(player);
+}
+
+function collectGameState() {
+  return {
+    influence: { ...state.influence },
+    player: {
+      x: player.position.x,
+      y: player.position.y,
+      z: player.position.z,
+      outfitTier: 0,
+      isMilitary: false,
+    },
+    npcs: state.npcs.map((n) => ({
+      id: n.id,
+      type: n.type,
+      x: n.x,
+      z: n.z,
+      state: n.state,
+      arrested: n.arrested,
+      timer: n.timer,
+    })),
+    events: state.buildings
+      .filter((b) => b.onFire)
+      .map((b) => ({ id: `fire-${b.id}`, type: 'fire', buildingId: b.id })),
+    cityStats: {
+      safety: state.cityHealth,
+      order: state.cityHealth,
+      transport: state.cityHealth,
+      fireSafety: state.cityHealth,
+    },
+    score: state.score,
+    cityHealth: state.cityHealth,
+    camYaw: state.camYaw,
+    camPitch: state.camPitch,
+    lastFire: state.lastFire,
+    lastCrime: state.lastCrime,
+  };
+}
+
+function persistGame() {
+  if (!state.running) return;
+  save(collectGameState());
+  state.lastSave = performance.now();
+}
+
+function applySave(data) {
+  state.influence = { ...state.influence, ...data.influence };
+  state.score = data.score ?? 0;
+  state.cityHealth = data.cityHealth ?? data.cityStats?.safety ?? 100;
+  state.camYaw = data.camYaw ?? 0;
+  state.camPitch = data.camPitch ?? 0.25;
+  state.lastFire = data.lastFire ?? performance.now();
+  state.lastCrime = data.lastCrime ?? performance.now() - 8000;
+
+  $('#score').textContent = state.score;
+  changeCityHealth(0);
+
+  const savedNpcs = data.npcs || [];
+  const maxId = savedNpcs.reduce((max, n) => {
+    const match = n.id?.match(/-(\d+)$/);
+    return match ? Math.max(max, Number(match[1])) : max;
+  }, 0);
+  npcIdCounter = maxId;
+
+  initPlayer(data.player);
+  restoreNPCs(savedNpcs);
+
+  (data.events || []).forEach((event) => {
+    if (event.type !== 'fire') return;
+    const building = state.buildings.find((b) => b.id === event.buildingId);
+    if (building) {
+      startFire(building, true);
+      assignFirefighter(building);
+    }
+  });
 }
 
 function doJump() {
@@ -795,7 +913,10 @@ function setupInput() {
   $('#btn-help-close').addEventListener('click', () => { $('#overlay-help').classList.add('hidden'); GameAudio.button(); });
   $('#btn-pause').addEventListener('click', togglePause);
   $('#btn-resume').addEventListener('click', () => { togglePause(false); GameAudio.button(); });
-  $('#btn-restart').addEventListener('click', () => location.reload());
+  $('#btn-restart').addEventListener('click', () => {
+    clear();
+    location.reload();
+  });
 
   window.addEventListener('resize', onResize);
 }
@@ -835,9 +956,13 @@ function initScene() {
 
   clock = new THREE.Clock();
   buildWorld();
+  initSpawnSystem(state.colliders, {
+    worldSize: CFG.worldSize,
+    roadWidth: CFG.roadWidth,
+    blockSize: CFG.blockSize,
+    playerRadius: CFG.playerRadius,
+  });
   setupCars();
-  initPlayer();
-  initNPCs();
 }
 
 function onResize() {
@@ -846,16 +971,32 @@ function onResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-function startGame() {
+function startGame(opts = {}) {
+  const { skipOverlay = false, resumed = false } = opts;
+
+  if (!resumed) {
+    initPlayer();
+    initNPCsRandom();
+  }
+
   state.running = true;
-  state.lastFire = performance.now();
-  state.lastCrime = performance.now() - 8000;
-  $('#overlay-start').classList.add('hidden');
+  if (!resumed) {
+    state.lastFire = performance.now();
+    state.lastCrime = performance.now() - 8000;
+  }
+  state.lastSave = performance.now();
+
+  if (skipOverlay || !resumed) $('#overlay-start').classList.add('hidden');
+
   GameAudio.init();
   GameAudio.startMusic();
   canvas.requestPointerLock();
   animate();
-  notify('Добро пожаловать в БлокСити!', 'ok');
+
+  if (resumed) notify('Сессия восстановлена', 'info');
+  else notify('Добро пожаловать в БлокСити!', 'ok');
+
+  persistGame();
 }
 
 function animate() {
@@ -869,8 +1010,25 @@ function animate() {
   updateEvents();
   animateFires(clock.elapsedTime);
   renderer.render(scene, camera);
+
+  const now = performance.now();
+  if (now - state.lastSave >= AUTOSAVE_INTERVAL_MS) persistGame();
 }
 
-setupInput();
-initScene();
-onResize();
+function bootstrap() {
+  setupInput();
+  initScene();
+  onResize();
+
+  if (hasSave()) {
+    const saved = load();
+    if (saved) {
+      applySave(saved);
+      startGame({ skipOverlay: true, resumed: true });
+      return;
+    }
+    clear();
+  }
+}
+
+bootstrap();
