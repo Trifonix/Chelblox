@@ -130,6 +130,10 @@ function box(w, h, d, color) {
   return m;
 }
 
+function clamp(v, a, b) {
+  return Math.max(a, Math.min(b, v));
+}
+
 function resetCamera() {
   state.camYaw = player ? player.rotation.y : 0;
   state.camPitch = 0.25;

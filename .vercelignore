@@ -4,5 +4,9 @@ playwright-report/
 blob-report/
 playwright/
 node_modules/
+package.json
+package-lock.json
+playwright.config.js
 PLAN.md
 PROJECT.md
+README.md

@@ -7,14 +7,14 @@ test.describe('version', () => {
     await page.goto(E2E_URL);
     await waitForTestApi(page);
 
-    await expect(page.getByTestId('game-version')).toHaveText('v0.2.1');
-    await expect(page).toHaveTitle('ЧелБлокс v0.2.1');
+    await expect(page.getByTestId('game-version')).toHaveText('v0.3.1');
+    await expect(page).toHaveTitle('ЧелБлокс v0.3.1');
 
     const info = await page.evaluate(() => window.__CHELBLOX_TEST__.getVersionInfo());
     expect(info).toEqual({
-      version: '0.2.1',
-      label: 'v0.2.1',
-      title: 'ЧелБлокс v0.2.1',
+      version: '0.3.1',
+      label: 'v0.3.1',
+      title: 'ЧелБлокс v0.3.1',
     });
   });
 });
