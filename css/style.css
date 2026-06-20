@@ -57,10 +57,12 @@ html.game-loading #overlay-loading {
   display: flex;
   align-items: center;
   gap: 14px;
+  flex-wrap: wrap;
   padding: 12px 18px;
   background: linear-gradient(180deg, rgba(13,17,23,0.92), rgba(13,17,23,0.6));
   border-bottom: 1px solid rgba(255,255,255,0.08);
   pointer-events: auto;
+  z-index: 30;
 }
 
 .logo {
@@ -160,13 +162,14 @@ html.game-loading #overlay-loading {
   top: 80px;
   right: 18px;
   width: 220px;
-  max-height: calc(100vh - 100px);
+  max-height: calc(100vh - 200px);
   overflow-y: auto;
   background: rgba(13,17,23,0.9);
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 10px;
   padding: 14px;
   pointer-events: auto;
+  z-index: 20;
 }
 
 #influence-panel h3 {
@@ -247,13 +250,17 @@ html.game-loading #overlay-loading {
 /* Notifications */
 #notifications {
   position: fixed;
-  top: 72px;
-  right: 18px;
+  top: 76px;
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 8px;
-  max-width: 320px;
+  max-width: min(420px, calc(100vw - 480px));
   pointer-events: none;
+  z-index: 25;
 }
 
 .toast {
@@ -285,11 +292,14 @@ html.game-loading #overlay-loading {
   top: 80px;
   left: 18px;
   width: 220px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
   background: rgba(13,17,23,0.85);
   border: 1px solid rgba(255,255,255,0.1);
   border-radius: 10px;
   padding: 14px;
   pointer-events: auto;
+  z-index: 20;
 }
 
 #mission-panel h3 {
@@ -340,6 +350,7 @@ html.game-loading #overlay-loading {
   background: linear-gradient(0deg, rgba(13,17,23,0.95), rgba(13,17,23,0.5));
   border-top: 1px solid rgba(255,255,255,0.08);
   pointer-events: auto;
+  z-index: 30;
 }
 
 .action-group {
@@ -591,12 +602,12 @@ html.game-loading #overlay-loading {
   margin-bottom: 8px;
 }
 
-@media (max-width: 900px) {
-  #influence-panel { display: none; }
+@media (max-width: 1100px) and (min-width: 901px) {
+  #notifications {
+    max-width: min(360px, calc(100vw - 40px));
+  }
 }
 
-@media (max-width: 600px) {
-  #mission-panel { display: none; }
-  .action-btn { min-width: 72px; padding: 8px 10px; }
-  .action-label { font-size: 0.75rem; }
+@media (max-width: 900px) {
+  .action-btn { min-width: 80px; padding: 8px 12px; }
 }

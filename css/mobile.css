@@ -286,7 +286,12 @@
 
 /* Уведомления не перекрывают touch-зону */
 .mobile-ui #notifications {
+  top: auto;
   bottom: 200px;
+  left: auto;
+  right: 10px;
+  transform: none;
+  align-items: stretch;
   max-width: calc(100vw - 20px);
 }
 
