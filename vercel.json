@@ -1,23 +1,31 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "node scripts/write-build-id.js",
   "headers": [
     {
       "source": "/index.html",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" }
+        { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/js/(bootstrap|buildId|assets|version)\\.js",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, must-revalidate" },
+        { "key": "X-Content-Type-Options", "value": "nosniff" }
       ]
     },
     {
       "source": "/js/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" },
         { "key": "X-Content-Type-Options", "value": "nosniff" }
       ]
     },
     {
       "source": "/css/(.*)",
       "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=0, must-revalidate" },
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" },
         { "key": "X-Content-Type-Options", "value": "nosniff" }
       ]
     },

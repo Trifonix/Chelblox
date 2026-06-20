@@ -13,8 +13,10 @@ test.describe('version', () => {
     const info = await page.evaluate(() => window.__CHELBLOX_TEST__.getVersionInfo());
     expect(info).toEqual({
       version: '0.3.1',
+      buildId: 'dev',
       label: 'v0.3.1',
       title: 'ЧелБлокс v0.3.1',
+      assetVersion: '0.3.1-dev',
     });
   });
 });

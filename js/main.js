@@ -31,6 +31,7 @@ import { getWalkPhase, markWalking, tickWalkAnimations } from './walkAnim.js';
 import { clear, hasSave, load, save } from './storage.js';
 import { initInfluenceHUD, updateInfluenceHUD } from './ui.js';
 import { applyVersionToUI, GAME_VERSION, getVersionInfo } from './version.js';
+import { getAssetVersion } from './assets.js';
 import { getRandomSpawn, initSpawnSystem } from './world.js';
 
 /* ═══════════════════════════════════════════
@@ -1270,6 +1271,7 @@ function exposeTestApi() {
     getSettings: () => ({ ...gameSettings }),
     getVersion: () => GAME_VERSION,
     getVersionInfo: () => getVersionInfo(),
+    getAssetVersion: () => getAssetVersion(),
   };
 }
 

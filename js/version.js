@@ -1,3 +1,4 @@
+import { BUILD_ID } from './buildId.js';
 import { GAME_NAME_RU } from './config.js';
 
 /** Версия игры (семантическая: major.minor.patch). */
@@ -24,7 +25,9 @@ export function applyVersionToUI() {
 export function getVersionInfo() {
   return {
     version: GAME_VERSION,
+    buildId: BUILD_ID,
     label: getVersionLabel(),
     title: getGameTitle(),
+    assetVersion: `${GAME_VERSION}-${BUILD_ID}`,
   };
 }
